@@ -1,7 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { useSession, signIn, signUp, signOut } from "@/lib/auth-client";
+import {
+  useSession,
+  signIn,
+  signUp,
+  signOut,
+  passkey,
+} from "@/lib/auth-client";
 
 export default function Home() {
   const { data: session, isPending } = useSession();
@@ -63,6 +69,34 @@ export default function Home() {
     }
   };
 
+  const handlePasskeySignIn = async () => {
+    setErrorMessage("");
+    setSuccessMessage("");
+    try {
+      const res = await signIn.passkey();
+      if (res?.error) {
+        setErrorMessage(res.error.message || "Passkey sign in failed");
+      }
+    } catch (err: any) {
+      setErrorMessage(err.message || "Passkey sign in failed");
+    }
+  };
+
+  const handleAddPasskey = async () => {
+    setErrorMessage("");
+    setSuccessMessage("");
+    try {
+      const res = await passkey.addPasskey();
+      if (res?.error) {
+        setErrorMessage(res.error.message || "Failed to add passkey");
+      } else {
+        setSuccessMessage("Passkey registered successfully!");
+      }
+    } catch (err: any) {
+      setErrorMessage(err.message || "Failed to add passkey");
+    }
+  };
+
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-zinc-950 px-4 text-white">
       <div className="w-full max-w-md rounded-2xl border border-zinc-800 bg-zinc-900 p-8 shadow-xl">
@@ -70,7 +104,7 @@ export default function Home() {
           Orbit Auth Tester
         </h1>
         <p className="mb-6 text-sm text-zinc-400">
-          Testing Email & Password, Google OAuth, and Account Linking
+          Testing Email & Password, Google OAuth, Passkeys, and Account Linking
         </p>
 
         {isPending ? (
@@ -117,6 +151,24 @@ export default function Home() {
               </div>
             </div>
 
+            {errorMessage && (
+              <p className="text-xs font-medium text-red-400">{errorMessage}</p>
+            )}
+
+            {successMessage && (
+              <p className="text-xs font-medium text-emerald-400">
+                {successMessage}
+              </p>
+            )}
+
+            <button
+              onClick={handleAddPasskey}
+              type="button"
+              className="flex w-full items-center justify-center gap-2 rounded-xl border border-zinc-700 bg-zinc-800 py-3 text-sm font-semibold text-white transition hover:bg-zinc-700"
+            >
+              🔑 Add New Passkey
+            </button>
+
             <button
               onClick={() => signOut()}
               className="w-full rounded-xl border border-red-500/20 bg-red-600/10 py-3 text-sm font-semibold text-red-400 transition hover:bg-red-600/20"
@@ -126,6 +178,15 @@ export default function Home() {
           </div>
         ) : (
           <div>
+            {/* Passkey Sign In */}
+            <button
+              onClick={handlePasskeySignIn}
+              type="button"
+              className="mb-3 flex w-full items-center justify-center gap-3 rounded-xl border border-blue-500/30 bg-blue-600/10 py-3 text-sm font-semibold text-blue-400 transition hover:bg-blue-600/20"
+            >
+              🔑 Sign in with Passkey
+            </button>
+
             {/* Social Login */}
             <button
               onClick={handleGoogleSignIn}

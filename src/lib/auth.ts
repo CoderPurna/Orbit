@@ -1,5 +1,6 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { passkey } from "@better-auth/passkey";
 import { db } from "@/db/client";
 import * as schema from "@/db/schema";
 
@@ -8,6 +9,7 @@ export const auth = betterAuth({
     provider: "pg",
     schema,
   }),
+  plugins: [passkey()],
   emailAndPassword: {
     enabled: true,
   },
