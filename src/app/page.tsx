@@ -1,69 +1,226 @@
-import Image from "next/image";
+"use client";
+
+import { useState } from "react";
+import { useSession, signIn, signUp, signOut } from "@/lib/auth-client";
 
 export default function Home() {
+  const { data: session, isPending } = useSession();
+  const [isSignUp, setIsSignUp] = useState(false);
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setErrorMessage("");
+    setSuccessMessage("");
+
+    try {
+      if (isSignUp) {
+        const res = await signUp.email({
+          name,
+          email,
+          password,
+          callbackURL: "/",
+        });
+
+        if (res.error) {
+          setErrorMessage(res.error.message || "Sign up failed");
+        } else {
+          setSuccessMessage("Account created successfully!");
+        }
+      } else {
+        const res = await signIn.email({
+          email,
+          password,
+          callbackURL: "/",
+        });
+
+        if (res.error) {
+          setErrorMessage(res.error.message || "Sign in failed");
+        }
+      }
+    } catch (err: any) {
+      setErrorMessage(err.message || "An unexpected error occurred");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    setErrorMessage("");
+    try {
+      await signIn.social({
+        provider: "google",
+        callbackURL: "/",
+      });
+    } catch (err: any) {
+      setErrorMessage(err.message || "Google sign in failed");
+    }
+  };
+
   return (
-    <div className="flex flex-1 flex-col items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex w-full max-w-3xl flex-1 flex-col items-center justify-between bg-white px-16 py-32 sm:items-start dark:bg-black">
-        <Image
-          className="h-5 w-[100px] dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl leading-10 font-semibold tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
+    <div className="flex min-h-screen flex-col items-center justify-center bg-zinc-950 px-4 text-white">
+      <div className="w-full max-w-md rounded-2xl border border-zinc-800 bg-zinc-900 p-8 shadow-xl">
+        <h1 className="mb-1 text-2xl font-bold tracking-tight">Orbit Auth Tester</h1>
+        <p className="mb-6 text-sm text-zinc-400">
+          Testing Email & Password, Google OAuth, and Account Linking
+        </p>
+
+        {isPending ? (
+          <div className="flex items-center justify-center py-10">
+            <div className="h-7 w-7 animate-spin rounded-full border-2 border-zinc-400 border-t-transparent"></div>
+          </div>
+        ) : session?.user ? (
+          <div className="space-y-6">
+            <div className="rounded-xl border border-zinc-800 bg-zinc-950/60 p-5">
+              <div className="flex items-center gap-4">
+                {session.user.image ? (
+                  <img
+                    src={session.user.image}
+                    alt={session.user.name || "User Avatar"}
+                    className="h-14 w-14 rounded-full border border-zinc-700 object-cover"
+                  />
+                ) : (
+                  <div className="flex h-14 w-14 items-center justify-center rounded-full bg-zinc-800 text-xl font-bold text-zinc-200">
+                    {session.user.name?.[0]?.toUpperCase() || "U"}
+                  </div>
+                )}
+                <div className="overflow-hidden">
+                  <p className="truncate text-lg font-semibold text-white">{session.user.name}</p>
+                  <p className="truncate text-xs text-zinc-400">{session.user.email}</p>
+                  <span className="mt-1 inline-block rounded-md bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium text-emerald-400 border border-emerald-500/20">
+                    Authenticated
+                  </span>
+                </div>
+              </div>
+
+              <div className="mt-4 border-t border-zinc-800/80 pt-3 text-xs text-zinc-400 space-y-1">
+                <p><span className="text-zinc-500">User ID:</span> {session.user.id}</p>
+                <p><span className="text-zinc-500">Email Verified:</span> {session.user.emailVerified ? "Yes" : "No"}</p>
+              </div>
+            </div>
+
+            <button
+              onClick={() => signOut()}
+              className="w-full rounded-xl border border-red-500/20 bg-red-600/10 py-3 text-sm font-semibold text-red-400 transition hover:bg-red-600/20"
             >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
+              Sign Out
+            </button>
+          </div>
+        ) : (
+          <div>
+            {/* Social Login */}
+            <button
+              onClick={handleGoogleSignIn}
+              type="button"
+              className="flex w-full items-center justify-center gap-3 rounded-xl border border-zinc-700 bg-zinc-800 py-3 text-sm font-semibold text-white transition hover:bg-zinc-700"
             >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="bg-foreground text-background flex h-12 w-full items-center justify-center gap-2 rounded-full px-5 transition-colors hover:bg-[#383838] md:w-[158px] dark:hover:bg-[#ccc]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="h-[14px] w-4 dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] md:w-[158px] dark:border-white/[.145] dark:hover:bg-[#1a1a1a]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+              <svg className="h-5 w-5" viewBox="0 0 24 24">
+                <path
+                  fill="#EA4335"
+                  d="M12 5c1.6 0 3 .6 4.1 1.6l3.1-3.1C17.3 1.7 14.8 1 12 1 7.5 1 3.7 3.6 1.9 7.3l3.7 2.9C6.5 7.1 9 5 12 5z"
+                />
+                <path
+                  fill="#4285F4"
+                  d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.5h6.5c-.3 1.5-1.1 2.8-2.4 3.7l3.7 2.9c2.2-2 3.7-5 3.7-8.8z"
+                />
+                <path
+                  fill="#FBBC05"
+                  d="M5.6 14.8c-.2-.7-.4-1.5-.4-2.3s.2-1.6.4-2.3L1.9 7.3C.7 9.7 0 10.8 0 12.5s.7 2.8 1.9 5.2l3.7-2.9z"
+                />
+                <path
+                  fill="#34A853"
+                  d="M12 24c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3 0-5.5-2.1-6.4-5.2L1.9 17C3.7 20.7 7.5 24 12 24z"
+                />
+              </svg>
+              Sign in with Google
+            </button>
+
+            <div className="my-5 flex items-center gap-3">
+              <div className="h-px flex-1 bg-zinc-800"></div>
+              <span className="text-xs text-zinc-500 font-medium">OR EMAIL</span>
+              <div className="h-px flex-1 bg-zinc-800"></div>
+            </div>
+
+            {/* Email Form */}
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {isSignUp && (
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-zinc-400">Full Name</label>
+                  <input
+                    type="text"
+                    required
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="John Doe"
+                    className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-2.5 text-sm text-white placeholder-zinc-500 focus:border-zinc-600 focus:outline-none"
+                  />
+                </div>
+              )}
+
+              <div>
+                <label className="mb-1 block text-xs font-medium text-zinc-400">Email Address</label>
+                <input
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="user@example.com"
+                  className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-2.5 text-sm text-white placeholder-zinc-500 focus:border-zinc-600 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-xs font-medium text-zinc-400">Password</label>
+                <input
+                  type="password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full rounded-xl border border-zinc-800 bg-zinc-950 px-4 py-2.5 text-sm text-white placeholder-zinc-500 focus:border-zinc-600 focus:outline-none"
+                />
+              </div>
+
+              {errorMessage && (
+                <p className="text-xs font-medium text-red-400">{errorMessage}</p>
+              )}
+
+              {successMessage && (
+                <p className="text-xs font-medium text-emerald-400">{successMessage}</p>
+              )}
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full rounded-xl bg-white py-3 text-sm font-semibold text-black transition hover:bg-zinc-200 disabled:opacity-50"
+              >
+                {loading ? "Processing..." : isSignUp ? "Create Account" : "Sign In with Email"}
+              </button>
+            </form>
+
+            <div className="mt-6 text-center text-xs text-zinc-400">
+              {isSignUp ? "Already have an account?" : "Don't have an account?"}{" "}
+              <button
+                type="button"
+                onClick={() => {
+                  setIsSignUp(!isSignUp);
+                  setErrorMessage("");
+                  setSuccessMessage("");
+                }}
+                className="font-semibold text-white underline underline-offset-2 hover:text-zinc-300"
+              >
+                {isSignUp ? "Sign In" : "Sign Up"}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
