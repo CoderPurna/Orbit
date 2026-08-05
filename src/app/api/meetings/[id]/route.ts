@@ -12,15 +12,15 @@ async function findMeeting(idOrCode: string) {
     .where(
       and(
         or(eq(meeting.id, idOrCode), eq(meeting.roomCode, idOrCode)),
-        isNull(meeting.deletedAt)
-      )
+        isNull(meeting.deletedAt),
+      ),
     );
   return result ?? null;
 }
 
 export async function GET(
   _req: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const { id } = await params;
@@ -32,13 +32,16 @@ export async function GET(
 
     return NextResponse.json({ meeting: foundMeeting });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message || "Failed to get meeting" }, { status: 500 });
+    return NextResponse.json(
+      { error: error.message || "Failed to get meeting" },
+      { status: 500 },
+    );
   }
 }
 
 export async function PATCH(
   req: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const session = await auth.api.getSession({
@@ -57,7 +60,10 @@ export async function PATCH(
     }
 
     if (existingMeeting.hostId !== session.user.id) {
-      return NextResponse.json({ error: "Forbidden: Only host can update meeting" }, { status: 403 });
+      return NextResponse.json(
+        { error: "Forbidden: Only host can update meeting" },
+        { status: 403 },
+      );
     }
 
     const body = await req.json();
@@ -89,10 +95,14 @@ export async function PATCH(
     }
 
     if (body.scheduledStartAt !== undefined) {
-      updateData.scheduledStartAt = body.scheduledStartAt ? new Date(body.scheduledStartAt) : null;
+      updateData.scheduledStartAt = body.scheduledStartAt
+        ? new Date(body.scheduledStartAt)
+        : null;
     }
     if (body.scheduledEndAt !== undefined) {
-      updateData.scheduledEndAt = body.scheduledEndAt ? new Date(body.scheduledEndAt) : null;
+      updateData.scheduledEndAt = body.scheduledEndAt
+        ? new Date(body.scheduledEndAt)
+        : null;
     }
 
     const [updatedMeeting] = await db
@@ -103,13 +113,16 @@ export async function PATCH(
 
     return NextResponse.json({ meeting: updatedMeeting });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message || "Failed to update meeting" }, { status: 500 });
+    return NextResponse.json(
+      { error: error.message || "Failed to update meeting" },
+      { status: 500 },
+    );
   }
 }
 
 export async function DELETE(
   _req: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const session = await auth.api.getSession({
@@ -128,7 +141,10 @@ export async function DELETE(
     }
 
     if (existingMeeting.hostId !== session.user.id) {
-      return NextResponse.json({ error: "Forbidden: Only host can delete meeting" }, { status: 403 });
+      return NextResponse.json(
+        { error: "Forbidden: Only host can delete meeting" },
+        { status: 403 },
+      );
     }
 
     await db
@@ -142,6 +158,9 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message || "Failed to delete meeting" }, { status: 500 });
+    return NextResponse.json(
+      { error: error.message || "Failed to delete meeting" },
+      { status: 500 },
+    );
   }
 }

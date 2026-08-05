@@ -17,10 +17,22 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json();
-    const { title, description, type, scheduledStartAt, scheduledEndAt, timezone, privacyMode, maxParticipants } = body;
+    const {
+      title,
+      description,
+      type,
+      scheduledStartAt,
+      scheduledEndAt,
+      timezone,
+      privacyMode,
+      maxParticipants,
+    } = body;
 
     if (!title || typeof title !== "string" || !title.trim()) {
-      return NextResponse.json({ error: "Meeting title is required" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Meeting title is required" },
+        { status: 400 },
+      );
     }
 
     const roomCode = generateRoomCode();
@@ -52,7 +64,10 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ meeting: newMeeting }, { status: 201 });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message || "Failed to create meeting" }, { status: 500 });
+    return NextResponse.json(
+      { error: error.message || "Failed to create meeting" },
+      { status: 500 },
+    );
   }
 }
 
@@ -69,11 +84,16 @@ export async function GET() {
     const userMeetings = await db
       .select()
       .from(meeting)
-      .where(and(eq(meeting.hostId, session.user.id), isNull(meeting.deletedAt)))
+      .where(
+        and(eq(meeting.hostId, session.user.id), isNull(meeting.deletedAt)),
+      )
       .orderBy(desc(meeting.createdAt));
 
     return NextResponse.json({ meetings: userMeetings });
   } catch (error: any) {
-    return NextResponse.json({ error: error.message || "Failed to fetch meetings" }, { status: 500 });
+    return NextResponse.json(
+      { error: error.message || "Failed to fetch meetings" },
+      { status: 500 },
+    );
   }
 }

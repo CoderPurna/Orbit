@@ -8,11 +8,11 @@ import { AccessToken } from "livekit-server-sdk";
 
 export async function POST(
   req: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const { id } = await params;
-    
+
     // Find meeting by ID or room code
     const [targetMeeting] = await db
       .select()
@@ -20,8 +20,8 @@ export async function POST(
       .where(
         and(
           or(eq(meeting.id, id), eq(meeting.roomCode, id)),
-          isNull(meeting.deletedAt)
-        )
+          isNull(meeting.deletedAt),
+        ),
       );
 
     if (!targetMeeting) {
@@ -29,7 +29,10 @@ export async function POST(
     }
 
     if (targetMeeting.isLocked) {
-      return NextResponse.json({ error: "Meeting is locked by the host" }, { status: 403 });
+      return NextResponse.json(
+        { error: "Meeting is locked by the host" },
+        { status: 403 },
+      );
     }
 
     const session = await auth.api.getSession({
@@ -44,10 +47,14 @@ export async function POST(
       name = session.user.name || session.user.email || "Participant";
     } else {
       const body = await req.json().catch(() => ({}));
-      if (!body.displayName || typeof body.displayName !== "string" || !body.displayName.trim()) {
+      if (
+        !body.displayName ||
+        typeof body.displayName !== "string" ||
+        !body.displayName.trim()
+      ) {
         return NextResponse.json(
           { error: "Display name is required for guest participants" },
-          { status: 400 }
+          { status: 400 },
         );
       }
       identity = `guest_${crypto.randomUUID().slice(0, 8)}`;
@@ -61,7 +68,7 @@ export async function POST(
     if (!apiKey || !apiSecret) {
       return NextResponse.json(
         { error: "LiveKit API key or secret not configured on server" },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -76,7 +83,8 @@ export async function POST(
     at.addGrant({
       roomJoin: true,
       room: targetMeeting.livekitRoomName,
-      canPublish: targetMeeting.allowChat || targetMeeting.allowScreenShare || true,
+      canPublish:
+        targetMeeting.allowChat || targetMeeting.allowScreenShare || true,
       canSubscribe: true,
       canPublishData: targetMeeting.allowChat,
       roomAdmin: isHost,
@@ -98,7 +106,7 @@ export async function POST(
   } catch (error: any) {
     return NextResponse.json(
       { error: error.message || "Failed to generate access token" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

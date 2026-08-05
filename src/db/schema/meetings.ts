@@ -31,7 +31,9 @@ import {
 export const meeting = pgTable("meeting", {
   id: uuid("id").defaultRandom().primaryKey(),
   roomCode: varchar("room_code", { length: 16 }).notNull().unique(),
-  livekitRoomName: varchar("livekit_room_name", { length: 64 }).notNull().unique(),
+  livekitRoomName: varchar("livekit_room_name", { length: 64 })
+    .notNull()
+    .unique(),
   hostId: text("host_id")
     .notNull()
     .references(() => user.id, { onDelete: "restrict" }),
@@ -56,8 +58,12 @@ export const meeting = pgTable("meeting", {
   aiSummaryEnabled: boolean("ai_summary_enabled").notNull().default(false),
   chatRetentionDays: smallint("chat_retention_days").notNull().default(90),
   extraSettings: jsonb("extra_settings").notNull().default("{}"),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
   deletedAt: timestamp("deleted_at", { withTimezone: true }),
 });
 
@@ -71,17 +77,25 @@ export const meetingSession = pgTable(
     livekitRoomSid: varchar("livekit_room_sid", { length: 64 }).unique(),
     sequence: integer("sequence").notNull(),
     status: sessionStatusEnum("status").notNull().default("live"),
-    startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
+    startedAt: timestamp("started_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
     endedAt: timestamp("ended_at", { withTimezone: true }),
     durationSeconds: integer("duration_seconds"),
     peakParticipants: smallint("peak_participants").notNull().default(0),
     uniqueParticipants: smallint("unique_participants").notNull().default(0),
-    totalParticipantSeconds: bigint("total_participant_seconds", { mode: "number" }).notNull().default(0),
+    totalParticipantSeconds: bigint("total_participant_seconds", {
+      mode: "number",
+    })
+      .notNull()
+      .default(0),
     endReason: sessionEndReasonEnum("end_reason"),
     liteModeUsed: boolean("lite_mode_used").notNull().default(false),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
   },
-  (table) => [unique("idx_session_seq").on(table.meetingId, table.sequence)]
+  (table) => [unique("idx_session_seq").on(table.meetingId, table.sequence)],
 );
 
 export const meetingInvite = pgTable(
@@ -91,8 +105,12 @@ export const meetingInvite = pgTable(
     meetingId: uuid("meeting_id")
       .notNull()
       .references(() => meeting.id, { onDelete: "cascade" }),
-    invitedById: text("invited_by_id").references(() => user.id, { onDelete: "set null" }),
-    invitedUserId: text("invited_user_id").references(() => user.id, { onDelete: "set null" }),
+    invitedById: text("invited_by_id").references(() => user.id, {
+      onDelete: "set null",
+    }),
+    invitedUserId: text("invited_user_id").references(() => user.id, {
+      onDelete: "set null",
+    }),
     invitedEmail: varchar("invited_email", { length: 320 }).notNull(),
     role: meetingRoleEnum("role").notNull().default("participant"),
     status: inviteStatusEnum("status").notNull().default("pending"),
@@ -100,9 +118,13 @@ export const meetingInvite = pgTable(
     bypassWaitingRoom: boolean("bypass_waiting_room").notNull().default(false),
     remindedAt: timestamp("reminded_at", { withTimezone: true }),
     respondedAt: timestamp("responded_at", { withTimezone: true }),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
   },
-  (table) => [unique("idx_invite_unique").on(table.meetingId, table.invitedEmail)]
+  (table) => [
+    unique("idx_invite_unique").on(table.meetingId, table.invitedEmail),
+  ],
 );
 
 export const meetingParticipant = pgTable(
@@ -117,7 +139,9 @@ export const meetingParticipant = pgTable(
     livekitIdentity: varchar("livekit_identity", { length: 80 }).notNull(),
     role: meetingRoleEnum("role").notNull().default("participant"),
     state: participantStateEnum("state").notNull().default("active"),
-    joinedAt: timestamp("joined_at", { withTimezone: true }).notNull().defaultNow(),
+    joinedAt: timestamp("joined_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
     leftAt: timestamp("left_at", { withTimezone: true }),
     durationSeconds: integer("duration_seconds"),
     leaveReason: leaveReasonEnum("leave_reason"),
@@ -132,15 +156,30 @@ export const meetingParticipant = pgTable(
     browser: varchar("browser", { length: 40 }),
     os: varchar("os", { length: 40 }),
     ipCountry: char("ip_country", { length: 2 }),
-    avgConnectionQuality: numeric("avg_connection_quality", { precision: 3, scale: 2 }),
+    avgConnectionQuality: numeric("avg_connection_quality", {
+      precision: 3,
+      scale: 2,
+    }),
     worstConnectionQuality: varchar("worst_connection_quality", { length: 12 }),
     avgRttMs: integer("avg_rtt_ms"),
-    avgPacketLossPct: numeric("avg_packet_loss_pct", { precision: 5, scale: 2 }),
+    avgPacketLossPct: numeric("avg_packet_loss_pct", {
+      precision: 5,
+      scale: 2,
+    }),
     freezeCount: integer("freeze_count").notNull().default(0),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
   },
-  (table) => [unique("idx_participant_identity").on(table.sessionId, table.livekitIdentity)]
+  (table) => [
+    unique("idx_participant_identity").on(
+      table.sessionId,
+      table.livekitIdentity,
+    ),
+  ],
 );
 
 export const waitingRoomEntry = pgTable("waiting_room_entry", {
@@ -154,8 +193,12 @@ export const waitingRoomEntry = pgTable("waiting_room_entry", {
   userId: text("user_id").references(() => user.id, { onDelete: "set null" }),
   displayName: varchar("display_name", { length: 60 }).notNull(),
   status: knockStatusEnum("status").notNull().default("waiting"),
-  requestedAt: timestamp("requested_at", { withTimezone: true }).notNull().defaultNow(),
-  decidedById: uuid("decided_by_id").references(() => meetingParticipant.id, { onDelete: "set null" }),
+  requestedAt: timestamp("requested_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  decidedById: uuid("decided_by_id").references(() => meetingParticipant.id, {
+    onDelete: "set null",
+  }),
   decidedAt: timestamp("decided_at", { withTimezone: true }),
   expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
 });

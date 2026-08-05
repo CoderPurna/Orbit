@@ -54,36 +54,42 @@ export const meetingRelations = relations(meeting, ({ one, many }) => ({
   invites: many(meetingInvite),
 }));
 
-export const meetingSessionRelations = relations(meetingSession, ({ one, many }) => ({
-  meeting: one(meeting, {
-    fields: [meetingSession.meetingId],
-    references: [meeting.id],
+export const meetingSessionRelations = relations(
+  meetingSession,
+  ({ one, many }) => ({
+    meeting: one(meeting, {
+      fields: [meetingSession.meetingId],
+      references: [meeting.id],
+    }),
+    participants: many(meetingParticipant),
+    waitingRoomEntries: many(waitingRoomEntry),
+    chatMessages: many(chatMessage),
+    attachments: many(attachment),
+    reactions: many(reaction),
+    polls: many(poll),
+    recordings: many(recording),
+    transcripts: many(transcript),
+    summary: one(meetingSummary),
   }),
-  participants: many(meetingParticipant),
-  waitingRoomEntries: many(waitingRoomEntry),
-  chatMessages: many(chatMessage),
-  attachments: many(attachment),
-  reactions: many(reaction),
-  polls: many(poll),
-  recordings: many(recording),
-  transcripts: many(transcript),
-  summary: one(meetingSummary),
-}));
+);
 
-export const meetingParticipantRelations = relations(meetingParticipant, ({ one, many }) => ({
-  session: one(meetingSession, {
-    fields: [meetingParticipant.sessionId],
-    references: [meetingSession.id],
+export const meetingParticipantRelations = relations(
+  meetingParticipant,
+  ({ one, many }) => ({
+    session: one(meetingSession, {
+      fields: [meetingParticipant.sessionId],
+      references: [meetingSession.id],
+    }),
+    user: one(user, {
+      fields: [meetingParticipant.userId],
+      references: [user.id],
+    }),
+    chatMessagesSent: many(chatMessage, { relationName: "sender" }),
+    attachmentsUploaded: many(attachment),
+    reactionsSent: many(reaction),
+    actionItemsAssigned: many(actionItem),
   }),
-  user: one(user, {
-    fields: [meetingParticipant.userId],
-    references: [user.id],
-  }),
-  chatMessagesSent: many(chatMessage, { relationName: "sender" }),
-  attachmentsUploaded: many(attachment),
-  reactionsSent: many(reaction),
-  actionItemsAssigned: many(actionItem),
-}));
+);
 
 export const chatMessageRelations = relations(chatMessage, ({ one }) => ({
   session: one(meetingSession, {
@@ -133,28 +139,34 @@ export const transcriptRelations = relations(transcript, ({ one, many }) => ({
   summary: one(meetingSummary),
 }));
 
-export const transcriptSegmentRelations = relations(transcriptSegment, ({ one }) => ({
-  transcript: one(transcript, {
-    fields: [transcriptSegment.transcriptId],
-    references: [transcript.id],
+export const transcriptSegmentRelations = relations(
+  transcriptSegment,
+  ({ one }) => ({
+    transcript: one(transcript, {
+      fields: [transcriptSegment.transcriptId],
+      references: [transcript.id],
+    }),
+    participant: one(meetingParticipant, {
+      fields: [transcriptSegment.participantId],
+      references: [meetingParticipant.id],
+    }),
   }),
-  participant: one(meetingParticipant, {
-    fields: [transcriptSegment.participantId],
-    references: [meetingParticipant.id],
-  }),
-}));
+);
 
-export const meetingSummaryRelations = relations(meetingSummary, ({ one, many }) => ({
-  session: one(meetingSession, {
-    fields: [meetingSummary.sessionId],
-    references: [meetingSession.id],
+export const meetingSummaryRelations = relations(
+  meetingSummary,
+  ({ one, many }) => ({
+    session: one(meetingSession, {
+      fields: [meetingSummary.sessionId],
+      references: [meetingSession.id],
+    }),
+    transcript: one(transcript, {
+      fields: [meetingSummary.transcriptId],
+      references: [transcript.id],
+    }),
+    actionItems: many(actionItem),
   }),
-  transcript: one(transcript, {
-    fields: [meetingSummary.transcriptId],
-    references: [transcript.id],
-  }),
-  actionItems: many(actionItem),
-}));
+);
 
 export const actionItemRelations = relations(actionItem, ({ one }) => ({
   summary: one(meetingSummary, {

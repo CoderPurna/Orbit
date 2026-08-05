@@ -66,7 +66,9 @@ export default function Home() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-zinc-950 px-4 text-white">
       <div className="w-full max-w-md rounded-2xl border border-zinc-800 bg-zinc-900 p-8 shadow-xl">
-        <h1 className="mb-1 text-2xl font-bold tracking-tight">Orbit Auth Tester</h1>
+        <h1 className="mb-1 text-2xl font-bold tracking-tight">
+          Orbit Auth Tester
+        </h1>
         <p className="mb-6 text-sm text-zinc-400">
           Testing Email & Password, Google OAuth, and Account Linking
         </p>
@@ -91,17 +93,27 @@ export default function Home() {
                   </div>
                 )}
                 <div className="overflow-hidden">
-                  <p className="truncate text-lg font-semibold text-white">{session.user.name}</p>
-                  <p className="truncate text-xs text-zinc-400">{session.user.email}</p>
-                  <span className="mt-1 inline-block rounded-md bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium text-emerald-400 border border-emerald-500/20">
+                  <p className="truncate text-lg font-semibold text-white">
+                    {session.user.name}
+                  </p>
+                  <p className="truncate text-xs text-zinc-400">
+                    {session.user.email}
+                  </p>
+                  <span className="mt-1 inline-block rounded-md border border-emerald-500/20 bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium text-emerald-400">
                     Authenticated
                   </span>
                 </div>
               </div>
 
-              <div className="mt-4 border-t border-zinc-800/80 pt-3 text-xs text-zinc-400 space-y-1">
-                <p><span className="text-zinc-500">User ID:</span> {session.user.id}</p>
-                <p><span className="text-zinc-500">Email Verified:</span> {session.user.emailVerified ? "Yes" : "No"}</p>
+              <div className="mt-4 space-y-1 border-t border-zinc-800/80 pt-3 text-xs text-zinc-400">
+                <p>
+                  <span className="text-zinc-500">User ID:</span>{" "}
+                  {session.user.id}
+                </p>
+                <p>
+                  <span className="text-zinc-500">Email Verified:</span>{" "}
+                  {session.user.emailVerified ? "Yes" : "No"}
+                </p>
               </div>
             </div>
 
@@ -143,7 +155,9 @@ export default function Home() {
 
             <div className="my-5 flex items-center gap-3">
               <div className="h-px flex-1 bg-zinc-800"></div>
-              <span className="text-xs text-zinc-500 font-medium">OR EMAIL</span>
+              <span className="text-xs font-medium text-zinc-500">
+                OR EMAIL
+              </span>
               <div className="h-px flex-1 bg-zinc-800"></div>
             </div>
 
@@ -151,7 +165,9 @@ export default function Home() {
             <form onSubmit={handleSubmit} className="space-y-4">
               {isSignUp && (
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-zinc-400">Full Name</label>
+                  <label className="mb-1 block text-xs font-medium text-zinc-400">
+                    Full Name
+                  </label>
                   <input
                     type="text"
                     required
@@ -164,7 +180,9 @@ export default function Home() {
               )}
 
               <div>
-                <label className="mb-1 block text-xs font-medium text-zinc-400">Email Address</label>
+                <label className="mb-1 block text-xs font-medium text-zinc-400">
+                  Email Address
+                </label>
                 <input
                   type="email"
                   required
@@ -176,7 +194,9 @@ export default function Home() {
               </div>
 
               <div>
-                <label className="mb-1 block text-xs font-medium text-zinc-400">Password</label>
+                <label className="mb-1 block text-xs font-medium text-zinc-400">
+                  Password
+                </label>
                 <input
                   type="password"
                   required
@@ -188,11 +208,15 @@ export default function Home() {
               </div>
 
               {errorMessage && (
-                <p className="text-xs font-medium text-red-400">{errorMessage}</p>
+                <p className="text-xs font-medium text-red-400">
+                  {errorMessage}
+                </p>
               )}
 
               {successMessage && (
-                <p className="text-xs font-medium text-emerald-400">{successMessage}</p>
+                <p className="text-xs font-medium text-emerald-400">
+                  {successMessage}
+                </p>
               )}
 
               <button
@@ -200,7 +224,11 @@ export default function Home() {
                 disabled={loading}
                 className="w-full rounded-xl bg-white py-3 text-sm font-semibold text-black transition hover:bg-zinc-200 disabled:opacity-50"
               >
-                {loading ? "Processing..." : isSignUp ? "Create Account" : "Sign In with Email"}
+                {loading
+                  ? "Processing..."
+                  : isSignUp
+                    ? "Create Account"
+                    : "Sign In with Email"}
               </button>
             </form>
 

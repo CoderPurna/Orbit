@@ -20,9 +20,12 @@ export const attachment = pgTable("attachment", {
   sessionId: uuid("session_id")
     .notNull()
     .references(() => meetingSession.id, { onDelete: "cascade" }),
-  uploaderParticipantId: uuid("uploader_participant_id").references(() => meetingParticipant.id, {
-    onDelete: "set null",
-  }),
+  uploaderParticipantId: uuid("uploader_participant_id").references(
+    () => meetingParticipant.id,
+    {
+      onDelete: "set null",
+    },
+  ),
   fileName: varchar("file_name", { length: 255 }).notNull(),
   mimeType: varchar("mime_type", { length: 120 }).notNull(),
   sizeBytes: bigint("size_bytes", { mode: "number" }).notNull(),
@@ -32,7 +35,9 @@ export const attachment = pgTable("attachment", {
   scanStatus: scanStatusEnum("scan_status").notNull().default("pending"),
   downloadCount: integer("download_count").notNull().default(0),
   expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
 });
 
 export const chatMessage = pgTable("chat_message", {
@@ -43,12 +48,18 @@ export const chatMessage = pgTable("chat_message", {
   senderParticipantId: uuid("sender_participant_id")
     .notNull()
     .references(() => meetingParticipant.id, { onDelete: "cascade" }),
-  recipientParticipantId: uuid("recipient_participant_id").references(() => meetingParticipant.id, {
-    onDelete: "cascade",
-  }),
-  replyToId: varchar("reply_to_id", { length: 26 }).references((): AnyPgColumn => chatMessage.id, {
-    onDelete: "set null",
-  }),
+  recipientParticipantId: uuid("recipient_participant_id").references(
+    () => meetingParticipant.id,
+    {
+      onDelete: "cascade",
+    },
+  ),
+  replyToId: varchar("reply_to_id", { length: 26 }).references(
+    (): AnyPgColumn => chatMessage.id,
+    {
+      onDelete: "set null",
+    },
+  ),
   attachmentId: uuid("attachment_id")
     .references(() => attachment.id, { onDelete: "set null" })
     .unique(),
@@ -65,9 +76,12 @@ export const reaction = pgTable("reaction", {
   sessionId: uuid("session_id")
     .notNull()
     .references(() => meetingSession.id, { onDelete: "cascade" }),
-  senderParticipantId: uuid("sender_participant_id").references(() => meetingParticipant.id, {
-    onDelete: "set null",
-  }),
+  senderParticipantId: uuid("sender_participant_id").references(
+    () => meetingParticipant.id,
+    {
+      onDelete: "set null",
+    },
+  ),
   emoji: varchar("emoji", { length: 16 }).notNull(),
   sentAt: timestamp("sent_at", { withTimezone: true }).notNull().defaultNow(),
 });
@@ -77,14 +91,19 @@ export const poll = pgTable("poll", {
   sessionId: uuid("session_id")
     .notNull()
     .references(() => meetingSession.id, { onDelete: "cascade" }),
-  creatorParticipantId: uuid("creator_participant_id").references(() => meetingParticipant.id, {
-    onDelete: "set null",
-  }),
+  creatorParticipantId: uuid("creator_participant_id").references(
+    () => meetingParticipant.id,
+    {
+      onDelete: "set null",
+    },
+  ),
   question: text("question").notNull(),
   isAnonymous: boolean("is_anonymous").notNull().default(false),
   allowMultiple: boolean("allow_multiple").notNull().default(false),
   status: pollStatusEnum("status").notNull().default("draft"),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
   closedAt: timestamp("closed_at", { withTimezone: true }),
 });
 
@@ -111,7 +130,15 @@ export const pollVote = pgTable(
     participantId: uuid("participant_id")
       .notNull()
       .references(() => meetingParticipant.id, { onDelete: "cascade" }),
-    votedAt: timestamp("voted_at", { withTimezone: true }).notNull().defaultNow(),
+    votedAt: timestamp("voted_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
   },
-  (table) => [unique("idx_poll_vote_unique").on(table.pollId, table.participantId, table.optionId)]
+  (table) => [
+    unique("idx_poll_vote_unique").on(
+      table.pollId,
+      table.participantId,
+      table.optionId,
+    ),
+  ],
 );

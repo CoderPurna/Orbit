@@ -95,12 +95,8 @@
           "name": "account_user_id_user_id_fk",
           "tableFrom": "account",
           "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -183,12 +179,8 @@
           "name": "passkey_user_id_user_id_fk",
           "tableFrom": "passkey",
           "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -266,12 +258,8 @@
           "name": "session_user_id_user_id_fk",
           "tableFrom": "session",
           "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -281,9 +269,7 @@
         "session_token_unique": {
           "name": "session_token_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "token"
-          ]
+          "columns": ["token"]
         }
       },
       "policies": {},
@@ -347,9 +333,7 @@
         "user_email_unique": {
           "name": "user_email_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "email"
-          ]
+          "columns": ["email"]
         }
       },
       "policies": {},
@@ -488,12 +472,8 @@
           "name": "push_subscription_user_id_user_id_fk",
           "tableFrom": "push_subscription",
           "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -503,9 +483,7 @@
         "push_subscription_endpoint_unique": {
           "name": "push_subscription_endpoint_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "endpoint"
-          ]
+          "columns": ["endpoint"]
         }
       },
       "policies": {},
@@ -620,12 +598,8 @@
           "name": "user_settings_user_id_user_id_fk",
           "tableFrom": "user_settings",
           "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -836,12 +810,8 @@
           "name": "meeting_host_id_user_id_fk",
           "tableFrom": "meeting",
           "tableTo": "user",
-          "columnsFrom": [
-            "host_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["host_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }
@@ -851,16 +821,12 @@
         "meeting_room_code_unique": {
           "name": "meeting_room_code_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "room_code"
-          ]
+          "columns": ["room_code"]
         },
         "meeting_livekit_room_name_unique": {
           "name": "meeting_livekit_room_name_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "livekit_room_name"
-          ]
+          "columns": ["livekit_room_name"]
         }
       },
       "policies": {},
@@ -957,12 +923,8 @@
           "name": "meeting_invite_meeting_id_meeting_id_fk",
           "tableFrom": "meeting_invite",
           "tableTo": "meeting",
-          "columnsFrom": [
-            "meeting_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["meeting_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -970,12 +932,8 @@
           "name": "meeting_invite_invited_by_id_user_id_fk",
           "tableFrom": "meeting_invite",
           "tableTo": "user",
-          "columnsFrom": [
-            "invited_by_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["invited_by_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -983,12 +941,8 @@
           "name": "meeting_invite_invited_user_id_user_id_fk",
           "tableFrom": "meeting_invite",
           "tableTo": "user",
-          "columnsFrom": [
-            "invited_user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["invited_user_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -998,17 +952,12 @@
         "meeting_invite_invite_token_unique": {
           "name": "meeting_invite_invite_token_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "invite_token"
-          ]
+          "columns": ["invite_token"]
         },
         "idx_invite_unique": {
           "name": "idx_invite_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "meeting_id",
-            "invited_email"
-          ]
+          "columns": ["meeting_id", "invited_email"]
         }
       },
       "policies": {},
@@ -1219,12 +1168,8 @@
           "name": "meeting_participant_session_id_meeting_session_id_fk",
           "tableFrom": "meeting_participant",
           "tableTo": "meeting_session",
-          "columnsFrom": [
-            "session_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["session_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1232,12 +1177,8 @@
           "name": "meeting_participant_user_id_user_id_fk",
           "tableFrom": "meeting_participant",
           "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -1247,10 +1188,7 @@
         "idx_participant_identity": {
           "name": "idx_participant_identity",
           "nullsNotDistinct": false,
-          "columns": [
-            "session_id",
-            "livekit_identity"
-          ]
+          "columns": ["session_id", "livekit_identity"]
         }
       },
       "policies": {},
@@ -1362,12 +1300,8 @@
           "name": "meeting_session_meeting_id_meeting_id_fk",
           "tableFrom": "meeting_session",
           "tableTo": "meeting",
-          "columnsFrom": [
-            "meeting_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["meeting_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1377,17 +1311,12 @@
         "meeting_session_livekit_room_sid_unique": {
           "name": "meeting_session_livekit_room_sid_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "livekit_room_sid"
-          ]
+          "columns": ["livekit_room_sid"]
         },
         "idx_session_seq": {
           "name": "idx_session_seq",
           "nullsNotDistinct": false,
-          "columns": [
-            "meeting_id",
-            "sequence"
-          ]
+          "columns": ["meeting_id", "sequence"]
         }
       },
       "policies": {},
@@ -1469,12 +1398,8 @@
           "name": "waiting_room_entry_session_id_meeting_session_id_fk",
           "tableFrom": "waiting_room_entry",
           "tableTo": "meeting_session",
-          "columnsFrom": [
-            "session_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["session_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1482,12 +1407,8 @@
           "name": "waiting_room_entry_participant_id_meeting_participant_id_fk",
           "tableFrom": "waiting_room_entry",
           "tableTo": "meeting_participant",
-          "columnsFrom": [
-            "participant_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["participant_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1495,12 +1416,8 @@
           "name": "waiting_room_entry_user_id_user_id_fk",
           "tableFrom": "waiting_room_entry",
           "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -1508,12 +1425,8 @@
           "name": "waiting_room_entry_decided_by_id_meeting_participant_id_fk",
           "tableFrom": "waiting_room_entry",
           "tableTo": "meeting_participant",
-          "columnsFrom": [
-            "decided_by_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["decided_by_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -1523,9 +1436,7 @@
         "waiting_room_entry_participant_id_unique": {
           "name": "waiting_room_entry_participant_id_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "participant_id"
-          ]
+          "columns": ["participant_id"]
         }
       },
       "policies": {},
@@ -1626,12 +1537,8 @@
           "name": "attachment_session_id_meeting_session_id_fk",
           "tableFrom": "attachment",
           "tableTo": "meeting_session",
-          "columnsFrom": [
-            "session_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["session_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1639,12 +1546,8 @@
           "name": "attachment_uploader_participant_id_meeting_participant_id_fk",
           "tableFrom": "attachment",
           "tableTo": "meeting_participant",
-          "columnsFrom": [
-            "uploader_participant_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["uploader_participant_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -1654,9 +1557,7 @@
         "attachment_r2_key_unique": {
           "name": "attachment_r2_key_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "r2_key"
-          ]
+          "columns": ["r2_key"]
         }
       },
       "policies": {},
@@ -1750,12 +1651,8 @@
           "name": "chat_message_session_id_meeting_session_id_fk",
           "tableFrom": "chat_message",
           "tableTo": "meeting_session",
-          "columnsFrom": [
-            "session_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["session_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1763,12 +1660,8 @@
           "name": "chat_message_sender_participant_id_meeting_participant_id_fk",
           "tableFrom": "chat_message",
           "tableTo": "meeting_participant",
-          "columnsFrom": [
-            "sender_participant_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["sender_participant_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1776,12 +1669,8 @@
           "name": "chat_message_recipient_participant_id_meeting_participant_id_fk",
           "tableFrom": "chat_message",
           "tableTo": "meeting_participant",
-          "columnsFrom": [
-            "recipient_participant_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["recipient_participant_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1789,12 +1678,8 @@
           "name": "chat_message_reply_to_id_chat_message_id_fk",
           "tableFrom": "chat_message",
           "tableTo": "chat_message",
-          "columnsFrom": [
-            "reply_to_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["reply_to_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -1802,12 +1687,8 @@
           "name": "chat_message_attachment_id_attachment_id_fk",
           "tableFrom": "chat_message",
           "tableTo": "attachment",
-          "columnsFrom": [
-            "attachment_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["attachment_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -1817,9 +1698,7 @@
         "chat_message_attachment_id_unique": {
           "name": "chat_message_attachment_id_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "attachment_id"
-          ]
+          "columns": ["attachment_id"]
         }
       },
       "policies": {},
@@ -1897,12 +1776,8 @@
           "name": "poll_session_id_meeting_session_id_fk",
           "tableFrom": "poll",
           "tableTo": "meeting_session",
-          "columnsFrom": [
-            "session_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["session_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1910,12 +1785,8 @@
           "name": "poll_creator_participant_id_meeting_participant_id_fk",
           "tableFrom": "poll",
           "tableTo": "meeting_participant",
-          "columnsFrom": [
-            "creator_participant_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["creator_participant_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -1969,12 +1840,8 @@
           "name": "poll_option_poll_id_poll_id_fk",
           "tableFrom": "poll_option",
           "tableTo": "poll",
-          "columnsFrom": [
-            "poll_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["poll_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -2028,12 +1895,8 @@
           "name": "poll_vote_poll_id_poll_id_fk",
           "tableFrom": "poll_vote",
           "tableTo": "poll",
-          "columnsFrom": [
-            "poll_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["poll_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -2041,12 +1904,8 @@
           "name": "poll_vote_option_id_poll_option_id_fk",
           "tableFrom": "poll_vote",
           "tableTo": "poll_option",
-          "columnsFrom": [
-            "option_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["option_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -2054,12 +1913,8 @@
           "name": "poll_vote_participant_id_meeting_participant_id_fk",
           "tableFrom": "poll_vote",
           "tableTo": "meeting_participant",
-          "columnsFrom": [
-            "participant_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["participant_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -2069,11 +1924,7 @@
         "idx_poll_vote_unique": {
           "name": "idx_poll_vote_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "poll_id",
-            "participant_id",
-            "option_id"
-          ]
+          "columns": ["poll_id", "participant_id", "option_id"]
         }
       },
       "policies": {},
@@ -2123,12 +1974,8 @@
           "name": "reaction_session_id_meeting_session_id_fk",
           "tableFrom": "reaction",
           "tableTo": "meeting_session",
-          "columnsFrom": [
-            "session_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["session_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -2136,12 +1983,8 @@
           "name": "reaction_sender_participant_id_meeting_participant_id_fk",
           "tableFrom": "reaction",
           "tableTo": "meeting_participant",
-          "columnsFrom": [
-            "sender_participant_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["sender_participant_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -2241,12 +2084,8 @@
           "name": "action_item_summary_id_meeting_summary_id_fk",
           "tableFrom": "action_item",
           "tableTo": "meeting_summary",
-          "columnsFrom": [
-            "summary_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["summary_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -2254,12 +2093,8 @@
           "name": "action_item_assignee_participant_id_meeting_participant_id_fk",
           "tableFrom": "action_item",
           "tableTo": "meeting_participant",
-          "columnsFrom": [
-            "assignee_participant_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["assignee_participant_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -2267,12 +2102,8 @@
           "name": "action_item_assignee_user_id_user_id_fk",
           "tableFrom": "action_item",
           "tableTo": "user",
-          "columnsFrom": [
-            "assignee_user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["assignee_user_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -2411,12 +2242,8 @@
           "name": "meeting_summary_session_id_meeting_session_id_fk",
           "tableFrom": "meeting_summary",
           "tableTo": "meeting_session",
-          "columnsFrom": [
-            "session_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["session_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -2424,12 +2251,8 @@
           "name": "meeting_summary_transcript_id_transcript_id_fk",
           "tableFrom": "meeting_summary",
           "tableTo": "transcript",
-          "columnsFrom": [
-            "transcript_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["transcript_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -2437,12 +2260,8 @@
           "name": "meeting_summary_edited_by_user_id_user_id_fk",
           "tableFrom": "meeting_summary",
           "tableTo": "user",
-          "columnsFrom": [
-            "edited_by_user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["edited_by_user_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -2452,16 +2271,12 @@
         "meeting_summary_session_id_unique": {
           "name": "meeting_summary_session_id_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "session_id"
-          ]
+          "columns": ["session_id"]
         },
         "meeting_summary_transcript_id_unique": {
           "name": "meeting_summary_transcript_id_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "transcript_id"
-          ]
+          "columns": ["transcript_id"]
         }
       },
       "policies": {},
@@ -2592,12 +2407,8 @@
           "name": "recording_session_id_meeting_session_id_fk",
           "tableFrom": "recording",
           "tableTo": "meeting_session",
-          "columnsFrom": [
-            "session_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["session_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -2605,12 +2416,8 @@
           "name": "recording_started_by_participant_id_meeting_participant_id_fk",
           "tableFrom": "recording",
           "tableTo": "meeting_participant",
-          "columnsFrom": [
-            "started_by_participant_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["started_by_participant_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -2620,16 +2427,12 @@
         "recording_livekit_egress_id_unique": {
           "name": "recording_livekit_egress_id_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "livekit_egress_id"
-          ]
+          "columns": ["livekit_egress_id"]
         },
         "recording_r2_key_unique": {
           "name": "recording_r2_key_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "r2_key"
-          ]
+          "columns": ["r2_key"]
         }
       },
       "policies": {},
@@ -2750,12 +2553,8 @@
           "name": "transcript_session_id_meeting_session_id_fk",
           "tableFrom": "transcript",
           "tableTo": "meeting_session",
-          "columnsFrom": [
-            "session_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["session_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -2763,12 +2562,8 @@
           "name": "transcript_recording_id_recording_id_fk",
           "tableFrom": "transcript",
           "tableTo": "recording",
-          "columnsFrom": [
-            "recording_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["recording_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -2778,9 +2573,7 @@
         "transcript_recording_id_unique": {
           "name": "transcript_recording_id_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "recording_id"
-          ]
+          "columns": ["recording_id"]
         }
       },
       "policies": {},
@@ -2864,12 +2657,8 @@
           "name": "transcript_segment_transcript_id_transcript_id_fk",
           "tableFrom": "transcript_segment",
           "tableTo": "transcript",
-          "columnsFrom": [
-            "transcript_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["transcript_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -2877,12 +2666,8 @@
           "name": "transcript_segment_participant_id_meeting_participant_id_fk",
           "tableFrom": "transcript_segment",
           "tableTo": "meeting_participant",
-          "columnsFrom": [
-            "participant_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["participant_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -2977,12 +2762,8 @@
           "name": "audit_log_actor_user_id_user_id_fk",
           "tableFrom": "audit_log",
           "tableTo": "user",
-          "columnsFrom": [
-            "actor_user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["actor_user_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -2990,12 +2771,8 @@
           "name": "audit_log_actor_participant_id_meeting_participant_id_fk",
           "tableFrom": "audit_log",
           "tableTo": "meeting_participant",
-          "columnsFrom": [
-            "actor_participant_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["actor_participant_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -3060,10 +2837,7 @@
         "idx_rollup_day_metric": {
           "name": "idx_rollup_day_metric",
           "nullsNotDistinct": false,
-          "columns": [
-            "day",
-            "metric"
-          ]
+          "columns": ["day", "metric"]
         }
       },
       "policies": {},
@@ -3154,12 +2928,8 @@
           "name": "usage_ledger_session_id_meeting_session_id_fk",
           "tableFrom": "usage_ledger",
           "tableTo": "meeting_session",
-          "columnsFrom": [
-            "session_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["session_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -3167,12 +2937,8 @@
           "name": "usage_ledger_user_id_user_id_fk",
           "tableFrom": "usage_ledger",
           "tableTo": "user",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -3276,10 +3042,7 @@
         "idx_webhook_external": {
           "name": "idx_webhook_external",
           "nullsNotDistinct": false,
-          "columns": [
-            "provider",
-            "external_event_id"
-          ]
+          "columns": ["provider", "external_event_id"]
         }
       },
       "policies": {},
@@ -3291,112 +3054,57 @@
     "public.action_status": {
       "name": "action_status",
       "schema": "public",
-      "values": [
-        "open",
-        "in_progress",
-        "done",
-        "dismissed"
-      ]
+      "values": ["open", "in_progress", "done", "dismissed"]
     },
     "public.content_visibility": {
       "name": "content_visibility",
       "schema": "public",
-      "values": [
-        "host_only",
-        "attendees",
-        "public"
-      ]
+      "values": ["host_only", "attendees", "public"]
     },
     "public.device_type": {
       "name": "device_type",
       "schema": "public",
-      "values": [
-        "web_desktop",
-        "web_mobile",
-        "android",
-        "ios",
-        "unknown"
-      ]
+      "values": ["web_desktop", "web_mobile", "android", "ios", "unknown"]
     },
     "public.invite_status": {
       "name": "invite_status",
       "schema": "public",
-      "values": [
-        "pending",
-        "accepted",
-        "declined",
-        "tentative",
-        "expired"
-      ]
+      "values": ["pending", "accepted", "declined", "tentative", "expired"]
     },
     "public.knock_status": {
       "name": "knock_status",
       "schema": "public",
-      "values": [
-        "waiting",
-        "admitted",
-        "denied",
-        "expired"
-      ]
+      "values": ["waiting", "admitted", "denied", "expired"]
     },
     "public.leave_reason": {
       "name": "leave_reason",
       "schema": "public",
-      "values": [
-        "left",
-        "removed",
-        "disconnected",
-        "meeting_ended",
-        "error"
-      ]
+      "values": ["left", "removed", "disconnected", "meeting_ended", "error"]
     },
     "public.meeting_role": {
       "name": "meeting_role",
       "schema": "public",
-      "values": [
-        "host",
-        "co_host",
-        "participant"
-      ]
+      "values": ["host", "co_host", "participant"]
     },
     "public.meeting_status": {
       "name": "meeting_status",
       "schema": "public",
-      "values": [
-        "scheduled",
-        "live",
-        "ended",
-        "cancelled"
-      ]
+      "values": ["scheduled", "live", "ended", "cancelled"]
     },
     "public.meeting_type": {
       "name": "meeting_type",
       "schema": "public",
-      "values": [
-        "instant",
-        "scheduled",
-        "recurring"
-      ]
+      "values": ["instant", "scheduled", "recurring"]
     },
     "public.message_type": {
       "name": "message_type",
       "schema": "public",
-      "values": [
-        "text",
-        "file",
-        "system",
-        "emoji"
-      ]
+      "values": ["text", "file", "system", "emoji"]
     },
     "public.participant_state": {
       "name": "participant_state",
       "schema": "public",
-      "values": [
-        "waiting",
-        "active",
-        "left",
-        "removed"
-      ]
+      "values": ["waiting", "active", "left", "removed"]
     },
     "public.pipeline_status": {
       "name": "pipeline_status",
@@ -3413,19 +3121,12 @@
     "public.poll_status": {
       "name": "poll_status",
       "schema": "public",
-      "values": [
-        "draft",
-        "open",
-        "closed"
-      ]
+      "values": ["draft", "open", "closed"]
     },
     "public.privacy_mode": {
       "name": "privacy_mode",
       "schema": "public",
-      "values": [
-        "standard",
-        "private"
-      ]
+      "values": ["standard", "private"]
     },
     "public.recording_status": {
       "name": "recording_status",
@@ -3443,33 +3144,17 @@
     "public.scan_status": {
       "name": "scan_status",
       "schema": "public",
-      "values": [
-        "pending",
-        "clean",
-        "infected",
-        "skipped",
-        "failed"
-      ]
+      "values": ["pending", "clean", "infected", "skipped", "failed"]
     },
     "public.session_end_reason": {
       "name": "session_end_reason",
       "schema": "public",
-      "values": [
-        "host_ended",
-        "last_left",
-        "timeout",
-        "max_duration",
-        "error"
-      ]
+      "values": ["host_ended", "last_left", "timeout", "max_duration", "error"]
     },
     "public.session_status": {
       "name": "session_status",
       "schema": "public",
-      "values": [
-        "live",
-        "ended",
-        "abandoned"
-      ]
+      "values": ["live", "ended", "abandoned"]
     },
     "public.usage_metric": {
       "name": "usage_metric",
@@ -3488,22 +3173,12 @@
     "public.video_quality": {
       "name": "video_quality",
       "schema": "public",
-      "values": [
-        "auto",
-        "low",
-        "medium",
-        "high"
-      ]
+      "values": ["auto", "low", "medium", "high"]
     },
     "public.webhook_status": {
       "name": "webhook_status",
       "schema": "public",
-      "values": [
-        "pending",
-        "processed",
-        "failed",
-        "ignored"
-      ]
+      "values": ["pending", "processed", "failed", "ignored"]
     }
   },
   "schemas": {},
