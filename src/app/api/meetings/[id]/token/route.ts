@@ -5,60 +5,59 @@ import { db } from "@/db/client";
 import { meeting } from "@/db/schema/meetings";
 import { eq, or, and, isNull } from "drizzle-orm";
 import { AccessToken } from "livekit-server-sdk";
+import { redis } from "@/lib/redis";
 
 export async function POST(
-  req: Request,
+  _req: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    const session = await auth.api.getSession({
+      headers: await headers(),
+    });
+
+    if (!session?.user) {
+      return NextResponse.json(
+        { error: "Unauthorized: Sign-in required to join meeting" },
+        { status: 401 },
+      );
+    }
+
     const { id } = await params;
 
-    // Find meeting by ID or room code
-    const [targetMeeting] = await db
-      .select()
-      .from(meeting)
-      .where(
-        and(
-          or(eq(meeting.id, id), eq(meeting.roomCode, id)),
-          isNull(meeting.deletedAt),
-        ),
-      );
+    // Resolve meeting by ID or room code
+    let targetMeeting: any = null;
+    const cacheKey = `code:${id}`;
+
+    if (redis) {
+      const cached = await redis.get(cacheKey);
+      if (cached) {
+        targetMeeting = typeof cached === "string" ? JSON.parse(cached) : cached;
+      }
+    }
+
+    if (!targetMeeting) {
+      const [result] = await db
+        .select()
+        .from(meeting)
+        .where(
+          and(
+            or(eq(meeting.id, id), eq(meeting.roomCode, id)),
+            isNull(meeting.deletedAt),
+          ),
+        );
+      targetMeeting = result;
+    }
 
     if (!targetMeeting) {
       return NextResponse.json({ error: "Meeting not found" }, { status: 404 });
     }
 
-    if (targetMeeting.isLocked) {
+    if (targetMeeting.isLocked && session.user.id !== targetMeeting.hostId) {
       return NextResponse.json(
         { error: "Meeting is locked by the host" },
         { status: 403 },
       );
-    }
-
-    const session = await auth.api.getSession({
-      headers: await headers(),
-    });
-
-    let identity: string;
-    let name: string;
-
-    if (session?.user) {
-      identity = session.user.id;
-      name = session.user.name || session.user.email || "Participant";
-    } else {
-      const body = await req.json().catch(() => ({}));
-      if (
-        !body.displayName ||
-        typeof body.displayName !== "string" ||
-        !body.displayName.trim()
-      ) {
-        return NextResponse.json(
-          { error: "Display name is required for guest participants" },
-          { status: 400 },
-        );
-      }
-      identity = `guest_${crypto.randomUUID().slice(0, 8)}`;
-      name = body.displayName.trim();
     }
 
     const apiKey = process.env.LIVEKIT_API_KEY;
@@ -72,25 +71,38 @@ export async function POST(
       );
     }
 
+    const isHost = session.user.id === targetMeeting.hostId;
+    const userId = session.user.id;
+    const identity = `u:${userId}`;
+    const displayName = session.user.name || session.user.email || "Participant";
+    const jti = crypto.randomUUID();
+
     const at = new AccessToken(apiKey, apiSecret, {
       identity,
-      name,
-      ttl: "24h",
+      name: displayName,
+      ttl: "10m", // 10 minutes TTL per spec (Architecture §5)
+      metadata: JSON.stringify({
+        userId,
+        role: isHost ? "host" : "participant",
+      }),
     });
-
-    const isHost = session?.user?.id === targetMeeting.hostId;
 
     at.addGrant({
       roomJoin: true,
       room: targetMeeting.livekitRoomName,
-      canPublish:
-        targetMeeting.allowChat || targetMeeting.allowScreenShare || true,
+      canPublish: !targetMeeting.isLocked,
       canSubscribe: true,
       canPublishData: targetMeeting.allowChat,
+      canUpdateOwnMetadata: true,
       roomAdmin: isHost,
     });
 
     const token = await at.toJwt();
+
+    if (redis) {
+      // Store single-use nonce for token (TTL 10m)
+      await redis.setex(`nonce:${jti}`, 600, identity);
+    }
 
     return NextResponse.json({
       token,

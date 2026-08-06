@@ -3,22 +3,60 @@ import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
 import { db } from "@/db/client";
 import { chatMessage } from "@/db/schema/content";
-import { meetingParticipant } from "@/db/schema/meetings";
-import { eq, and, isNull, asc } from "drizzle-orm";
-import { getActiveSession } from "@/lib/meeting-session";
+import { meetingParticipant, meeting, meetingSession } from "@/db/schema/meetings";
+import { eq, and, isNull, asc, or } from "drizzle-orm";
 import { redis } from "@/lib/redis";
 import { ulid } from "ulid";
+
+async function getMeetingAndSession(idOrCode: string) {
+  const [m] = await db
+    .select()
+    .from(meeting)
+    .where(
+      and(
+        or(eq(meeting.id, idOrCode), eq(meeting.roomCode, idOrCode)),
+        isNull(meeting.deletedAt),
+      ),
+    );
+
+  if (!m) return null;
+
+  const [activeSession] = await db
+    .select()
+    .from(meetingSession)
+    .where(
+      and(
+        eq(meetingSession.meetingId, m.id),
+        eq(meetingSession.status, "live"),
+      ),
+    )
+    .orderBy(asc(meetingSession.startedAt))
+    .limit(1);
+
+  return { meeting: m, session: activeSession ?? null };
+}
 
 export async function GET(
   _req: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const { id } = await params;
-    const resolved = await getActiveSession(id);
+    const sessionAuth = await auth.api.getSession({
+      headers: await headers(),
+    });
 
-    if (!resolved) {
-      return NextResponse.json({ error: "Meeting not found" }, { status: 404 });
+    if (!sessionAuth?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { id } = await params;
+    const resolved = await getMeetingAndSession(id);
+
+    if (!resolved || !resolved.session) {
+      return NextResponse.json(
+        { error: "Active meeting session not found" },
+        { status: 404 },
+      );
     }
 
     const { session } = resolved;
@@ -79,24 +117,37 @@ export async function POST(
       headers: await headers(),
     });
 
+    if (!sessionAuth?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const body = await req.json();
     const { id } = await params;
 
-    const resolved = await getActiveSession(
-      id,
-      sessionAuth?.user,
-      body.displayName,
-    );
-
-    if (!resolved) {
-      return NextResponse.json({ error: "Meeting not found" }, { status: 404 });
+    const resolved = await getMeetingAndSession(id);
+    if (!resolved || !resolved.session) {
+      return NextResponse.json(
+        { error: "Active meeting session not found" },
+        { status: 404 },
+      );
     }
 
-    const { session, participant } = resolved;
+    const { session } = resolved;
+    const livekitIdentity = `u:${sessionAuth.user.id}`;
+
+    const [participant] = await db
+      .select()
+      .from(meetingParticipant)
+      .where(
+        and(
+          eq(meetingParticipant.sessionId, session.id),
+          eq(meetingParticipant.livekitIdentity, livekitIdentity),
+        ),
+      );
 
     if (!participant) {
       return NextResponse.json(
-        { error: "Participant identity required to send chat" },
+        { error: "Participant not found in current meeting session" },
         { status: 400 },
       );
     }
@@ -108,7 +159,7 @@ export async function POST(
       );
     }
 
-    const messageId = ulid();
+    const messageId = body.id || ulid();
     const [newMessage] = await db
       .insert(chatMessage)
       .values({
@@ -122,10 +173,16 @@ export async function POST(
         body: body.body ?? null,
         isPrivate: Boolean(body.recipientParticipantId),
       })
+      .onConflictDoNothing()
       .returning();
 
     const formattedMessage = {
-      ...newMessage,
+      ...(newMessage || {
+        id: messageId,
+        sessionId: session.id,
+        senderParticipantId: participant.id,
+        body: body.body,
+      }),
       senderName: participant.displayName,
     };
 
@@ -139,53 +196,6 @@ export async function POST(
   } catch (error: any) {
     return NextResponse.json(
       { error: error.message || "Failed to send chat message" },
-      { status: 500 },
-    );
-  }
-}
-
-export async function DELETE(
-  req: Request,
-  { params }: { params: Promise<{ id: string }> },
-) {
-  try {
-    const sessionAuth = await auth.api.getSession({
-      headers: await headers(),
-    });
-
-    const { id } = await params;
-    const url = new URL(req.url);
-    const chatId = url.searchParams.get("chatId");
-
-    if (!chatId) {
-      return NextResponse.json(
-        { error: "chatId query parameter is required" },
-        { status: 400 },
-      );
-    }
-
-    const resolved = await getActiveSession(id, sessionAuth?.user);
-    if (!resolved) {
-      return NextResponse.json({ error: "Meeting not found" }, { status: 404 });
-    }
-
-    const { session } = resolved;
-
-    await db
-      .update(chatMessage)
-      .set({ deletedAt: new Date() })
-      .where(
-        and(eq(chatMessage.id, chatId), eq(chatMessage.sessionId, session.id)),
-      );
-
-    if (redis) {
-      await redis.del(`meeting:${session.id}:chats`);
-    }
-
-    return NextResponse.json({ success: true });
-  } catch (error: any) {
-    return NextResponse.json(
-      { error: error.message || "Failed to delete chat message" },
       { status: 500 },
     );
   }
