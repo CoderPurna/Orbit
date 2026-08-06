@@ -6,9 +6,10 @@ import { meeting } from "@/db/schema/meetings";
 import { eq, or, and, isNull } from "drizzle-orm";
 import { AccessToken } from "livekit-server-sdk";
 import { redis } from "@/lib/redis";
+import { verifyPasscode } from "@/lib/security";
 
 export async function POST(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
@@ -24,6 +25,7 @@ export async function POST(
     }
 
     const { id } = await params;
+    const body = await req.json().catch(() => ({}));
 
     // Resolve meeting by ID or room code
     let targetMeeting: any = null;
@@ -51,6 +53,20 @@ export async function POST(
 
     if (!targetMeeting) {
       return NextResponse.json({ error: "Meeting not found" }, { status: 404 });
+    }
+
+    // Verify argon2 passcode if meeting is passcode protected and user is not host
+    if (
+      targetMeeting.passcodeHash &&
+      session.user.id !== targetMeeting.hostId
+    ) {
+      const passcode = body.passcode;
+      if (!passcode || !(await verifyPasscode(String(passcode), targetMeeting.passcodeHash))) {
+        return NextResponse.json(
+          { error: "Invalid meeting passcode" },
+          { status: 401 },
+        );
+      }
     }
 
     if (targetMeeting.isLocked && session.user.id !== targetMeeting.hostId) {

@@ -5,6 +5,7 @@ import { db } from "@/db/client";
 import { meeting } from "@/db/schema/meetings";
 import { eq, and, isNull, desc } from "drizzle-orm";
 import { generateRoomCode } from "@/lib/room-code";
+import { hashPasscode } from "@/lib/security";
 
 export async function POST(req: Request) {
   try {
@@ -26,6 +27,7 @@ export async function POST(req: Request) {
       timezone,
       privacyMode,
       maxParticipants,
+      passcode,
     } = body;
 
     if (!title || typeof title !== "string" || !title.trim()) {
@@ -37,6 +39,7 @@ export async function POST(req: Request) {
 
     const roomCode = generateRoomCode();
     const livekitRoomName = `room_${crypto.randomUUID()}`;
+    const passcodeHash = passcode ? await hashPasscode(String(passcode)) : null;
 
     const [newMeeting] = await db
       .insert(meeting)
@@ -52,6 +55,7 @@ export async function POST(req: Request) {
         scheduledEndAt: scheduledEndAt ? new Date(scheduledEndAt) : null,
         timezone: timezone ?? "UTC",
         maxParticipants: maxParticipants ?? 25,
+        passcodeHash,
         waitingRoomEnabled: body.waitingRoomEnabled ?? false,
         allowChat: body.allowChat ?? true,
         allowScreenShare: body.allowScreenShare ?? true,

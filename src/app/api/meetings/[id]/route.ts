@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/db/client";
 import { meeting } from "@/db/schema/meetings";
 import { eq, or, and, isNull } from "drizzle-orm";
+import { hashPasscode } from "@/lib/security";
 
 async function findMeeting(idOrCode: string) {
   const [result] = await db
@@ -92,6 +93,12 @@ export async function PATCH(
       if (body[field] !== undefined) {
         updateData[field] = body[field];
       }
+    }
+
+    if (body.passcode !== undefined) {
+      updateData.passcodeHash = body.passcode
+        ? await hashPasscode(String(body.passcode))
+        : null;
     }
 
     if (body.scheduledStartAt !== undefined) {
