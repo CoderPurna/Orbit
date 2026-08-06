@@ -4,6 +4,8 @@ import { auth } from "@/lib/auth";
 import { db } from "@/db/client";
 import { meeting, meetingInvite } from "@/db/schema/meetings";
 import { eq, and, isNull } from "drizzle-orm";
+import { sendEmail } from "@/lib/email";
+import { getInviteEmailHtml } from "@/lib/email-templates";
 
 export async function POST(
   req: Request,
@@ -46,6 +48,8 @@ export async function POST(
     }
 
     const createdInvites = [];
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+
     for (const email of emails) {
       const cleanEmail = String(email).trim().toLowerCase();
       if (!cleanEmail) continue;
@@ -68,6 +72,23 @@ export async function POST(
           },
         })
         .returning();
+
+      // Dispatch HTML invite email asynchronously
+      const joinUrl = `${appUrl}/m/${targetMeeting.roomCode}`;
+      const html = getInviteEmailHtml({
+        title: targetMeeting.title,
+        hostName: session.user.name || session.user.email || "Host",
+        joinUrl,
+        scheduledStartAt: targetMeeting.scheduledStartAt
+          ? targetMeeting.scheduledStartAt.toLocaleString()
+          : null,
+      });
+
+      sendEmail({
+        to: cleanEmail,
+        subject: `Invitation: ${targetMeeting.title}`,
+        html,
+      }).catch((err) => console.error("Email invite failed:", err));
 
       createdInvites.push(inv);
     }
