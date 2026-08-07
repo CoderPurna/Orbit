@@ -1,8 +1,12 @@
 import { betterAuth } from "better-auth";
+import { emailOTP } from "better-auth/plugins";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { passkey } from "@better-auth/passkey";
 import { db } from "@/db/client";
 import * as schema from "@/db/schema";
+
+import { sendEmail } from "@/lib/email";
+import { getVerificationEmailHtml } from "@/lib/email-templates";
 
 const appUrl = process.env.BETTER_AUTH_URL || process.env.NEXT_PUBLIC_APP_URL;
 const trustedOrigins = process.env.BETTER_AUTH_TRUSTED_ORIGINS
@@ -18,9 +22,26 @@ export const auth = betterAuth({
     provider: "pg",
     schema,
   }),
-  plugins: [passkey()],
+  plugins: [
+    passkey(),
+    emailOTP({
+      sendVerificationOnSignUp: true,
+      overrideDefaultEmailVerification: true,
+      async sendVerificationOTP({ email, otp, type }) {
+        await sendEmail({
+          to: email,
+          subject: "Verify your Orbit account",
+          html: getVerificationEmailHtml({
+            name: email.split("@")[0],
+            token: otp,
+          }),
+        });
+      },
+    }),
+  ],
   emailAndPassword: {
     enabled: true,
+    requireEmailVerification: true,
   },
   socialProviders: {
     google: {

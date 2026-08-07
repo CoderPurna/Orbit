@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   useSession,
   signIn,
@@ -10,6 +11,7 @@ import {
 } from "@/lib/auth-client";
 
 export default function Home() {
+  const router = useRouter();
   const { data: session, isPending } = useSession();
   const [isSignUp, setIsSignUp] = useState(false);
   const [name, setName] = useState("");
@@ -37,7 +39,10 @@ export default function Home() {
         if (res.error) {
           setErrorMessage(res.error.message || "Sign up failed");
         } else {
-          setSuccessMessage("Account created successfully!");
+          setSuccessMessage("Account created! Redirecting to verification...");
+          setTimeout(() => {
+            router.push(`/verify-email?email=${encodeURIComponent(email)}`);
+          }, 1000);
         }
       } else {
         const res = await signIn.email({
@@ -47,7 +52,11 @@ export default function Home() {
         });
 
         if (res.error) {
-          setErrorMessage(res.error.message || "Sign in failed");
+          if (res.error.message?.toLowerCase().includes("verify")) {
+            router.push(`/verify-email?email=${encodeURIComponent(email)}`);
+          } else {
+            setErrorMessage(res.error.message || "Sign in failed");
+          }
         }
       }
     } catch (err: any) {

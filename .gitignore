@@ -40,11 +40,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
-.agents/AGENTS.md
-.agents/skills/ponytail/SKILL.md
-.agents/skills/ponytail-audit/SKILL.md
-.agents/skills/ponytail-help/SKILL.md
-.agents/skills/ponytail-review/SKILL.md
+.agents/*
 docs/*
-
 public/icons/README.md
+skills-lock.json
+.codex/hooks.json
