@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 119 48" width="119" height="48" style="color:#ECEDF0" role="img" aria-label="Orbit">
+  
+  <path d="M31.981 6.029 A19.665 19.665 0 1 1 16.019 6.029 A2.665 2.665 0 0 1 18.181 10.899 A14.335 14.335 0 1 0 29.819 10.899 A2.665 2.665 0 0 1 31.981 6.029 Z" fill="#3FB27A"></path>
+  <circle cx="24" cy="7" r="5.33" fill="currentColor"></circle>
+  <text x="47.5" y="43" font-family="Instrument Sans, system-ui, sans-serif" font-size="44.3" font-weight="600" letter-spacing="-2.2" fill="currentColor">rbit</text>
+</svg>

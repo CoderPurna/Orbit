@@ -1,6 +1,5 @@
 @import "tailwindcss";
 @import "tw-animate-css";
-@import "shadcn/tailwind.css";
 
 /* ============================================================
    Orbit — globals.css
@@ -300,8 +299,13 @@
   100% { opacity: 0; transform: translateY(-120px) scale(1.1); }
 }
 @keyframes orbit {
-  from { transform: rotate(-90deg); }
-  to   { transform: rotate(270deg); }
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+.animate-orbit {
+  transform-origin: 24px 24px;
+  animation: orbit 7s linear infinite;
 }
 
 /* Motion is explanatory, so it collapses to opacity rather than disappearing. */
