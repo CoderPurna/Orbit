@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { apiInternalError } from "@/lib/api-error";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
 import { db } from "@/db/client";
@@ -48,10 +49,7 @@ export async function GET() {
         "Content-Disposition": `attachment; filename="user-data-${userId}.json"`,
       },
     });
-  } catch (error: any) {
-    return NextResponse.json(
-      { error: error.message || "Failed to export user data" },
-      { status: 500 },
-    );
+  } catch (error) {
+    return apiInternalError("Failed to export user data", error);
   }
 }

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { apiInternalError } from "@/lib/api-error";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
 import { db } from "@/db/client";
@@ -35,6 +36,8 @@ export async function GET(
       return NextResponse.json({ error: "Meeting not found" }, { status: 404 });
     }
 
+    const isHost = m.hostId === sessionAuth.user.id;
+
     // Fetch latest session for this meeting
     const [latestSession] = await db
       .select()
@@ -62,6 +65,32 @@ export async function GET(
       );
     }
 
+    // Transcripts default to host-only visibility (PRD F29); `attendees`
+    // opens them to people who were in the session.
+    if (!isHost) {
+      if (t.visibility === "host_only") {
+        return NextResponse.json(
+          { error: { code: "forbidden", message: "This transcript is visible to the host only" } },
+          { status: 403 },
+        );
+      }
+      const [attendee] = await db
+        .select({ id: meetingParticipant.id })
+        .from(meetingParticipant)
+        .where(
+          and(
+            eq(meetingParticipant.sessionId, latestSession.id),
+            eq(meetingParticipant.livekitIdentity, `u:${sessionAuth.user.id}`),
+          ),
+        );
+      if (!attendee && t.visibility !== "public") {
+        return NextResponse.json(
+          { error: { code: "forbidden", message: "You did not attend this meeting" } },
+          { status: 403 },
+        );
+      }
+    }
+
     const segments = await db
       .select({
         id: transcriptSegment.id,
@@ -83,10 +112,7 @@ export async function GET(
       .orderBy(asc(transcriptSegment.startMs));
 
     return NextResponse.json({ transcript: t, segments });
-  } catch (error: any) {
-    return NextResponse.json(
-      { error: error.message || "Failed to fetch transcript" },
-      { status: 500 },
-    );
+  } catch (error) {
+    return apiInternalError("Failed to fetch transcript", error);
   }
 }

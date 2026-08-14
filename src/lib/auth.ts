@@ -41,7 +41,10 @@ export const auth = betterAuth({
   ],
   emailAndPassword: {
     enabled: true,
-    requireEmailVerification: true,
+    // PRD F2: verification must never block joining a meeting in progress —
+    // the OTP is sent on sign-up and verified asynchronously. What requires a
+    // verified email is *creating* meetings (enforced in POST /api/meetings).
+    requireEmailVerification: false,
   },
   socialProviders: {
     google: {

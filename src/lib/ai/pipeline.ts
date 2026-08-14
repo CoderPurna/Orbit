@@ -8,10 +8,32 @@ import {
 } from "@/db/schema/ai";
 import { meetingParticipant, meetingSession } from "@/db/schema/meetings";
 import { usageLedger } from "@/db/schema/ops";
-import { eq, and, sql, asc } from "drizzle-orm";
+import { eq, and, sql, asc, inArray, lt } from "drizzle-orm";
 import { redis } from "@/lib/redis";
+import { logger } from "@/lib/logger";
+
+/**
+ * No STT/LLM provider is integrated yet. Until one is, the pipeline only
+ * runs in explicit mock mode (AI_PIPELINE_MOCK=true) and stamps its output
+ * `model: "mock"` — fabricated transcripts must never be indistinguishable
+ * from real ones downstream.
+ */
+const MOCK_MODE = process.env.AI_PIPELINE_MOCK === "true";
+
+/**
+ * Cost ceiling per meeting (Architecture §8): estimate before the STT call;
+ * over the ceiling, mark skipped_cost rather than silently spending.
+ */
+const COST_CEILING_USD = Number(process.env.AI_COST_CEILING_USD ?? "1.00");
+const STT_COST_PER_MINUTE_USD = Number(
+  process.env.STT_COST_PER_MINUTE_USD ?? "0.006",
+);
 
 export async function runAiPipeline() {
+  if (!MOCK_MODE) {
+    logger.info("ai pipeline idle: no provider integrated (set AI_PIPELINE_MOCK=true for mock runs)");
+    return { status: "idle", processedTranscripts: 0, processedSummaries: 0 };
+  }
   const lockKey = "lock:ai_pump";
   if (redis) {
     const locked = await redis.set(lockKey, "1", { nx: true, ex: 30 });
@@ -37,16 +59,33 @@ export async function runAiPipeline() {
 }
 
 export async function processPendingTranscripts(): Promise<number> {
+  // Failed rows retry until the attempt cap — a permanently stuck row is
+  // visible as `failed` with `lastError`, never silently dropped.
   const pendingTranscripts = await db
     .select()
     .from(transcript)
-    .where(eq(transcript.status, "pending"))
+    .where(
+      and(
+        inArray(transcript.status, ["pending", "failed"]),
+        lt(transcript.attempts, 5),
+      ),
+    )
     .limit(5);
 
   let processedCount = 0;
 
   for (const t of pendingTranscripts) {
     try {
+      // Cost ceiling: estimate from duration before transcribing.
+      const estimatedMinutes = (t.durationSeconds ?? 3600) / 60;
+      if (estimatedMinutes * STT_COST_PER_MINUTE_USD > COST_CEILING_USD) {
+        await db
+          .update(transcript)
+          .set({ status: "skipped_cost" })
+          .where(eq(transcript.id, t.id));
+        continue;
+      }
+
       await db
         .update(transcript)
         .set({ status: "processing", startedAt: new Date() })
@@ -103,6 +142,8 @@ export async function processPendingTranscripts(): Promise<number> {
         .update(transcript)
         .set({
           status: "completed",
+          provider: "mock",
+          model: "mock",
           wordCount: totalWords,
           durationSeconds: 60,
           completedAt: new Date(),
@@ -131,16 +172,16 @@ export async function processPendingTranscripts(): Promise<number> {
         unit: "minutes",
         unitCostUsd: "0.006000",
         estimatedCostUsd: "0.006000",
-        provider: t.provider || "whisper",
+        provider: "mock",
       });
 
       processedCount++;
-    } catch (err: any) {
+    } catch (err) {
       await db
         .update(transcript)
         .set({
           status: "failed",
-          lastError: err.message || "STT processing failed",
+          lastError: err instanceof Error ? err.message : "STT processing failed",
           attempts: sql`${transcript.attempts} + 1`,
         })
         .where(eq(transcript.id, t.id));
@@ -154,7 +195,12 @@ export async function processPendingSummaries(): Promise<number> {
   const pendingSummaries = await db
     .select()
     .from(meetingSummary)
-    .where(eq(meetingSummary.status, "pending"))
+    .where(
+      and(
+        inArray(meetingSummary.status, ["pending", "failed"]),
+        lt(meetingSummary.attempts, 5),
+      ),
+    )
     .limit(5);
 
   let processedCount = 0;
@@ -186,18 +232,23 @@ export async function processPendingSummaries(): Promise<number> {
 
       const summaryMarkdown = `## Executive Summary\n\n- **Architecture**: Confirmed single WebRTC data channel stack (LiveKit) for chat and reactions.\n- **Authentication**: Enforced Better Auth sessions across the join hot path.\n- **AI Pipeline**: State-machine pump verified in Postgres.\n\n### Key Discussion Points\n\n1. Eliminating duplicate infrastructure to maintain serverless edge compatibility.\n2. Latency & join speed optimizations (< 200ms p95 same-region target).`;
 
+      // Shapes per DB Model §4.14: decisions [{text, startMs}], topics
+      // [{title, startMs, endMs}] — every claim links to a timestamp.
       const decisions = [
-        "Use LiveKit data channels for chat & reactions (no Socket.IO)",
-        "Enforce Better Auth session for all meeting participants",
+        { text: "Use LiveKit data channels for chat & reactions (no Socket.IO)", startMs: 16000 },
+        { text: "Enforce Better Auth session for all meeting participants", startMs: 36000 },
       ];
 
-      const topics = ["Architecture", "LiveKit", "Authentication", "AI Pipeline"];
+      const topics = [
+        { title: "Architecture", startMs: 0, endMs: 35000 },
+        { title: "Authentication & AI pipeline", startMs: 36000, endMs: 55000 },
+      ];
 
       await db
         .update(meetingSummary)
         .set({
           status: "completed",
-          model: "gpt-4o-mini",
+          model: "mock",
           tldr,
           summaryMarkdown,
           decisions,
@@ -219,7 +270,8 @@ export async function processPendingSummaries(): Promise<number> {
           assigneeUserId: firstParticipant.userId ?? null,
           status: "open",
           confidence: "0.950",
-          isConfirmed: true,
+          // The model proposes, the host confirms (F30).
+          isConfirmed: false,
         });
       }
 
@@ -231,7 +283,7 @@ export async function processPendingSummaries(): Promise<number> {
         unit: "tokens",
         unitCostUsd: "0.000002",
         estimatedCostUsd: "0.000900",
-        provider: "openai",
+        provider: "mock",
       });
 
       await db.insert(usageLedger).values({
@@ -241,16 +293,16 @@ export async function processPendingSummaries(): Promise<number> {
         unit: "tokens",
         unitCostUsd: "0.000002",
         estimatedCostUsd: "0.000440",
-        provider: "openai",
+        provider: "mock",
       });
 
       processedCount++;
-    } catch (err: any) {
+    } catch (err) {
       await db
         .update(meetingSummary)
         .set({
           status: "failed",
-          lastError: err.message || "Summarization failed",
+          lastError: err instanceof Error ? err.message : "Summarization failed",
           attempts: sql`${meetingSummary.attempts} + 1`,
         })
         .where(eq(meetingSummary.id, s.id));

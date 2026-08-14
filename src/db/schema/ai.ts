@@ -10,7 +10,10 @@ import {
   numeric,
   jsonb,
   uuid,
+  index,
+  check,
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { user } from "./auth";
 import { meetingSession, meetingParticipant } from "./meetings";
 import {
@@ -20,7 +23,9 @@ import {
   actionStatusEnum,
 } from "./enums";
 
-export const recording = pgTable("recording", {
+export const recording = pgTable(
+  "recording",
+  {
   id: uuid("id").defaultRandom().primaryKey(),
   sessionId: uuid("session_id")
     .notNull()
@@ -48,9 +53,19 @@ export const recording = pgTable("recording", {
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
-});
+  },
+  (table) => [
+    // Retention sweep working set
+    index("idx_recording_expiry")
+      .on(table.expiresAt)
+      .where(sql`${table.deletedAt} IS NULL`),
+    index("idx_recording_session").on(table.sessionId),
+  ],
+);
 
-export const transcript = pgTable("transcript", {
+export const transcript = pgTable(
+  "transcript",
+  {
   id: uuid("id").defaultRandom().primaryKey(),
   sessionId: uuid("session_id")
     .notNull()
@@ -75,9 +90,18 @@ export const transcript = pgTable("transcript", {
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
-});
+  },
+  (table) => [
+    // The AI pump's working set — partial, so it stays tiny (DB Model §5)
+    index("idx_transcript_pending")
+      .on(table.createdAt)
+      .where(sql`${table.status} IN ('pending', 'failed') AND ${table.attempts} < 5`),
+  ],
+);
 
-export const transcriptSegment = pgTable("transcript_segment", {
+export const transcriptSegment = pgTable(
+  "transcript_segment",
+  {
   id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
   transcriptId: uuid("transcript_id")
     .notNull()
@@ -94,9 +118,22 @@ export const transcriptSegment = pgTable("transcript_segment", {
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
-});
+  },
+  (table) => [
+    check("chk_segment_time_order", sql`${table.endMs} >= ${table.startMs}`),
+    // Transcript playback
+    index("idx_segment_transcript").on(table.transcriptId, table.startMs),
+    // Searchable transcripts (F31) — Postgres FTS, no extra service
+    index("idx_segment_fts").using(
+      "gin",
+      sql`to_tsvector('english', ${table.text})`,
+    ),
+  ],
+);
 
-export const meetingSummary = pgTable("meeting_summary", {
+export const meetingSummary = pgTable(
+  "meeting_summary",
+  {
   id: uuid("id").defaultRandom().primaryKey(),
   sessionId: uuid("session_id")
     .notNull()
@@ -109,8 +146,8 @@ export const meetingSummary = pgTable("meeting_summary", {
   model: varchar("model", { length: 60 }),
   tldr: text("tldr"),
   summaryMarkdown: text("summary_markdown"),
-  decisions: jsonb("decisions").notNull().default("[]"),
-  topics: jsonb("topics").notNull().default("[]"),
+  decisions: jsonb("decisions").notNull().default([]),
+  topics: jsonb("topics").notNull().default([]),
   inputTokens: integer("input_tokens"),
   outputTokens: integer("output_tokens"),
   estimatedCostUsd: numeric("estimated_cost_usd", { precision: 10, scale: 6 }),
@@ -126,9 +163,17 @@ export const meetingSummary = pgTable("meeting_summary", {
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
-});
+  },
+  (table) => [
+    index("idx_summary_pending")
+      .on(table.createdAt)
+      .where(sql`${table.status} IN ('pending', 'failed') AND ${table.attempts} < 5`),
+  ],
+);
 
-export const actionItem = pgTable("action_item", {
+export const actionItem = pgTable(
+  "action_item",
+  {
   id: uuid("id").defaultRandom().primaryKey(),
   summaryId: uuid("summary_id")
     .notNull()
@@ -154,4 +199,11 @@ export const actionItem = pgTable("action_item", {
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
-});
+  },
+  (table) => [
+    // Action item views: filter by assignee and status (DB Model §5)
+    index("idx_action_assignee")
+      .on(table.assigneeUserId, table.status)
+      .where(sql`${table.assigneeUserId} IS NOT NULL`),
+  ],
+);

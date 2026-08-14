@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
+import { apiInternalError } from "@/lib/api-error";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
 import { db } from "@/db/client";
 import { meetingParticipant } from "@/db/schema/meetings";
 import { eq, asc } from "drizzle-orm";
+import { findParticipant } from "@/lib/meetings";
 
 export async function GET(
   _req: Request,
@@ -19,6 +21,15 @@ export async function GET(
     }
 
     const { id: sessionId } = await params;
+
+    // The roster is participant-only: it exposes identities and join times.
+    const caller = await findParticipant(sessionId, sessionAuth.user.id);
+    if (!caller) {
+      return NextResponse.json(
+        { error: { code: "forbidden", message: "You are not in this meeting" } },
+        { status: 403 },
+      );
+    }
 
     const participants = await db
       .select({
@@ -40,10 +51,7 @@ export async function GET(
       .orderBy(asc(meetingParticipant.joinedAt));
 
     return NextResponse.json({ participants, count: participants.length });
-  } catch (error: any) {
-    return NextResponse.json(
-      { error: error.message || "Failed to fetch participants roster" },
-      { status: 500 },
-    );
+  } catch (error) {
+    return apiInternalError("Failed to fetch participants roster", error);
   }
 }

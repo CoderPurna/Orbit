@@ -12,7 +12,10 @@ import {
   jsonb,
   uuid,
   unique,
+  index,
+  check,
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { user } from "./auth";
 import {
   meetingTypeEnum,
@@ -28,7 +31,9 @@ import {
   deviceTypeEnum,
 } from "./enums";
 
-export const meeting = pgTable("meeting", {
+export const meeting = pgTable(
+  "meeting",
+  {
   id: uuid("id").defaultRandom().primaryKey(),
   roomCode: varchar("room_code", { length: 16 }).notNull().unique(),
   livekitRoomName: varchar("livekit_room_name", { length: 64 })
@@ -57,7 +62,7 @@ export const meeting = pgTable("meeting", {
   autoRecord: boolean("auto_record").notNull().default(false),
   aiSummaryEnabled: boolean("ai_summary_enabled").notNull().default(false),
   chatRetentionDays: smallint("chat_retention_days").notNull().default(90),
-  extraSettings: jsonb("extra_settings").notNull().default("{}"),
+  extraSettings: jsonb("extra_settings").notNull().default({}),
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
@@ -65,7 +70,32 @@ export const meeting = pgTable("meeting", {
     .notNull()
     .defaultNow(),
   deletedAt: timestamp("deleted_at", { withTimezone: true }),
-});
+  },
+  (table) => [
+    // PRD §4.4: E2EE and recording/AI are mutually exclusive — enforced here
+    // so no code path can violate it.
+    check(
+      "chk_meeting_private_mode",
+      sql`${table.privacyMode} <> 'private' OR (${table.allowRecording} = false AND ${table.aiSummaryEnabled} = false)`,
+    ),
+    check(
+      "chk_meeting_max_participants",
+      sql`${table.maxParticipants} BETWEEN 2 AND 50`,
+    ),
+    check(
+      "chk_meeting_schedule_order",
+      sql`${table.scheduledEndAt} IS NULL OR ${table.scheduledStartAt} IS NULL OR ${table.scheduledEndAt} > ${table.scheduledStartAt}`,
+    ),
+    // Host dashboard: "my meetings, most recent first"
+    index("idx_meeting_host_created")
+      .on(table.hostId, table.createdAt.desc())
+      .where(sql`${table.deletedAt} IS NULL`),
+    // Reminder cron: upcoming scheduled meetings
+    index("idx_meeting_upcoming")
+      .on(table.scheduledStartAt)
+      .where(sql`${table.status} = 'scheduled' AND ${table.deletedAt} IS NULL`),
+  ],
+);
 
 export const meetingSession = pgTable(
   "meeting_session",
@@ -95,7 +125,19 @@ export const meetingSession = pgTable(
       .notNull()
       .defaultNow(),
   },
-  (table) => [unique("idx_session_seq").on(table.meetingId, table.sequence)],
+  (table) => [
+    unique("idx_session_seq").on(table.meetingId, table.sequence),
+    check(
+      "chk_session_time_order",
+      sql`${table.endedAt} IS NULL OR ${table.endedAt} >= ${table.startedAt}`,
+    ),
+    // Sessions of a meeting, newest first
+    index("idx_session_meeting").on(table.meetingId, table.startedAt.desc()),
+    // The session reaper's working set
+    index("idx_session_live")
+      .on(table.startedAt)
+      .where(sql`${table.status} = 'live'`),
+  ],
 );
 
 export const meetingInvite = pgTable(
@@ -123,7 +165,11 @@ export const meetingInvite = pgTable(
       .defaultNow(),
   },
   (table) => [
+    // Emails are lowercased at the write boundary; this keeps bulk invites
+    // idempotent per DB Model §4.6.
     unique("idx_invite_unique").on(table.meetingId, table.invitedEmail),
+    index("idx_invite_email").on(table.invitedEmail),
+    index("idx_invite_user").on(table.invitedUserId),
   ],
 );
 
@@ -175,14 +221,27 @@ export const meetingParticipant = pgTable(
       .defaultNow(),
   },
   (table) => [
+    // The webhook upsert target — the load-bearing constraint (DB Model §4.7)
     unique("idx_participant_identity").on(
       table.sessionId,
       table.livekitIdentity,
     ),
+    check(
+      "chk_participant_time_order",
+      sql`${table.leftAt} IS NULL OR ${table.leftAt} >= ${table.joinedAt}`,
+    ),
+    index("idx_participant_user")
+      .on(table.userId, table.joinedAt.desc())
+      .where(sql`${table.userId} IS NOT NULL`),
+    index("idx_participant_present")
+      .on(table.sessionId)
+      .where(sql`${table.leftAt} IS NULL`),
   ],
 );
 
-export const waitingRoomEntry = pgTable("waiting_room_entry", {
+export const waitingRoomEntry = pgTable(
+  "waiting_room_entry",
+  {
   id: uuid("id").defaultRandom().primaryKey(),
   sessionId: uuid("session_id")
     .notNull()
@@ -201,4 +260,10 @@ export const waitingRoomEntry = pgTable("waiting_room_entry", {
   }),
   decidedAt: timestamp("decided_at", { withTimezone: true }),
   expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
-});
+  },
+  (table) => [
+    index("idx_waiting_session")
+      .on(table.sessionId)
+      .where(sql`${table.status} = 'waiting'`),
+  ],
+);

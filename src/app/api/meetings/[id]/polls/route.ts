@@ -4,27 +4,43 @@ import { auth } from "@/lib/auth";
 import { db } from "@/db/client";
 import { poll, pollOption, pollVote } from "@/db/schema/content";
 import { eq, and, sql, asc } from "drizzle-orm";
-import { getActiveSession } from "@/lib/meeting-session";
-import { redis } from "@/lib/redis";
+import { resolveMeeting, findParticipant } from "@/lib/meetings";
+import { ensureActiveSession } from "@/lib/meeting-session";
+import { apiError, apiInternalError } from "@/lib/api-error";
+
+/**
+ * Polls (Phase 4 scope). Participant-only, like every in-meeting surface —
+ * there is no anonymous path (ADR-012).
+ */
+async function resolveContext(idOrCode: string, userId: string) {
+  const targetMeeting = await resolveMeeting(idOrCode);
+  if (!targetMeeting) return null;
+  const session = await ensureActiveSession(targetMeeting.id);
+  const participant = await findParticipant(session.id, userId);
+  return { meeting: targetMeeting, session, participant };
+}
 
 export async function GET(
   _req: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const { id } = await params;
-    const resolved = await getActiveSession(id);
-
-    if (!resolved) {
-      return NextResponse.json({ error: "Meeting not found" }, { status: 404 });
+    const sessionAuth = await auth.api.getSession({ headers: await headers() });
+    if (!sessionAuth?.user) {
+      return apiError("unauthorized", "Sign in required", 401);
     }
 
-    const { session } = resolved;
+    const { id } = await params;
+    const ctx = await resolveContext(id, sessionAuth.user.id);
+    if (!ctx) return apiError("not_found", "Meeting not found", 404);
+    if (!ctx.participant) {
+      return apiError("forbidden", "You are not in this meeting", 403);
+    }
 
     const polls = await db
       .select()
       .from(poll)
-      .where(eq(poll.sessionId, session.id))
+      .where(eq(poll.sessionId, ctx.session.id))
       .orderBy(asc(poll.createdAt));
 
     const pollDetails = await Promise.all(
@@ -34,30 +50,13 @@ export async function GET(
           .from(pollOption)
           .where(eq(pollOption.pollId, p.id))
           .orderBy(asc(pollOption.sequence));
-
-        if (redis) {
-          const redisVotes = await redis.hgetall(
-            `meeting:${session.id}:poll:${p.id}`,
-          );
-          if (redisVotes) {
-            options.forEach((opt) => {
-              if (redisVotes[opt.id] !== undefined) {
-                opt.voteCount = Number(redisVotes[opt.id]);
-              }
-            });
-          }
-        }
-
         return { ...p, options };
       }),
     );
 
     return NextResponse.json({ polls: pollDetails });
-  } catch (error: any) {
-    return NextResponse.json(
-      { error: error.message || "Failed to fetch polls" },
-      { status: 500 },
-    );
+  } catch (error) {
+    return apiInternalError("meetings/polls#GET", error);
   }
 }
 
@@ -66,69 +65,67 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const sessionAuth = await auth.api.getSession({
-      headers: await headers(),
-    });
+    const sessionAuth = await auth.api.getSession({ headers: await headers() });
+    if (!sessionAuth?.user) {
+      return apiError("unauthorized", "Sign in required", 401);
+    }
 
-    const body = await req.json();
     const { id } = await params;
+    const body = await req.json();
     const { question, options, isAnonymous, allowMultiple } = body;
 
-    if (!question || !Array.isArray(options) || options.length < 2) {
-      return NextResponse.json(
-        { error: "Poll question and at least 2 options are required" },
-        { status: 400 },
+    if (
+      !question ||
+      typeof question !== "string" ||
+      !Array.isArray(options) ||
+      options.length < 2 ||
+      options.length > 10
+    ) {
+      return apiError(
+        "invalid_input",
+        "A poll needs a question and 2–10 options",
+        400,
       );
     }
 
-    const resolved = await getActiveSession(
-      id,
-      sessionAuth?.user,
-      body.displayName,
-    );
-
-    if (!resolved) {
-      return NextResponse.json({ error: "Meeting not found" }, { status: 404 });
+    const ctx = await resolveContext(id, sessionAuth.user.id);
+    if (!ctx) return apiError("not_found", "Meeting not found", 404);
+    if (!ctx.participant || ctx.participant.state !== "active") {
+      return apiError("forbidden", "You are not in this meeting", 403);
     }
-
-    const { session, participant } = resolved;
 
     const [newPoll] = await db
       .insert(poll)
       .values({
-        sessionId: session.id,
-        creatorParticipantId: participant?.id ?? null,
-        question: question.trim(),
+        sessionId: ctx.session.id,
+        creatorParticipantId: ctx.participant.id,
+        question: question.trim().slice(0, 500),
         isAnonymous: Boolean(isAnonymous),
         allowMultiple: Boolean(allowMultiple),
-        status: body.status ?? "published",
+        status: "open",
       })
       .returning();
 
-    const createdOptions = await Promise.all(
-      options.map(async (optionText: string, index: number) => {
-        const [opt] = await db
-          .insert(pollOption)
-          .values({
-            pollId: newPoll.id,
-            optionText: String(optionText).trim(),
-            sequence: index,
-            voteCount: 0,
-          })
-          .returning();
-        return opt;
-      }),
-    );
+    const createdOptions = [];
+    for (let index = 0; index < options.length; index++) {
+      const [opt] = await db
+        .insert(pollOption)
+        .values({
+          pollId: newPoll.id,
+          optionText: String(options[index]).trim().slice(0, 500),
+          sequence: index,
+          voteCount: 0,
+        })
+        .returning();
+      createdOptions.push(opt);
+    }
 
     return NextResponse.json(
       { poll: newPoll, options: createdOptions },
       { status: 201 },
     );
-  } catch (error: any) {
-    return NextResponse.json(
-      { error: error.message || "Failed to create poll" },
-      { status: 500 },
-    );
+  } catch (error) {
+    return apiInternalError("meetings/polls#POST", error);
   }
 }
 
@@ -137,98 +134,81 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const sessionAuth = await auth.api.getSession({
-      headers: await headers(),
-    });
-
-    const body = await req.json();
-    const { id } = await params;
-    const { action } = body;
-
-    const resolved = await getActiveSession(
-      id,
-      sessionAuth?.user,
-      body.displayName,
-    );
-
-    if (!resolved) {
-      return NextResponse.json({ error: "Meeting not found" }, { status: 404 });
+    const sessionAuth = await auth.api.getSession({ headers: await headers() });
+    if (!sessionAuth?.user) {
+      return apiError("unauthorized", "Sign in required", 401);
     }
 
-    const { session, participant } = resolved;
+    const { id } = await params;
+    const body = await req.json();
+    const { action } = body;
 
-    // Action 1: Vote on a poll option
+    const ctx = await resolveContext(id, sessionAuth.user.id);
+    if (!ctx) return apiError("not_found", "Meeting not found", 404);
+    if (!ctx.participant || ctx.participant.state !== "active") {
+      return apiError("forbidden", "You are not in this meeting", 403);
+    }
+
     if (action === "vote") {
       const { pollId, optionId } = body;
       if (!pollId || !optionId) {
-        return NextResponse.json(
-          { error: "pollId and optionId are required to vote" },
-          { status: 400 },
-        );
+        return apiError("invalid_input", "pollId and optionId are required", 400);
       }
 
-      if (!participant) {
-        return NextResponse.json(
-          { error: "Participant identity required to vote" },
-          { status: 400 },
-        );
+      const [targetPoll] = await db
+        .select()
+        .from(poll)
+        .where(and(eq(poll.id, pollId), eq(poll.sessionId, ctx.session.id)));
+      if (!targetPoll || targetPoll.status !== "open") {
+        return apiError("poll_closed", "This poll is not open for voting", 409);
       }
 
-      // Record vote in DB
-      await db.insert(pollVote).values({
-        pollId,
-        optionId,
-        participantId: participant.id,
-      });
+      // UNIQUE (pollId, participantId, optionId) makes re-votes a no-op;
+      // only count the vote when the insert actually landed.
+      const [vote] = await db
+        .insert(pollVote)
+        .values({ pollId, optionId, participantId: ctx.participant.id })
+        .onConflictDoNothing()
+        .returning();
 
-      // Increment vote count in poll_option table
-      await db
-        .update(pollOption)
-        .set({ voteCount: sql`${pollOption.voteCount} + 1` })
-        .where(eq(pollOption.id, optionId));
-
-      // Atomic increment in Redis if available
-      if (redis) {
-        await redis.hincrby(
-          `meeting:${session.id}:poll:${pollId}`,
-          optionId,
-          1,
-        );
+      if (vote) {
+        await db
+          .update(pollOption)
+          .set({ voteCount: sql`${pollOption.voteCount} + 1` })
+          .where(eq(pollOption.id, optionId));
       }
 
-      return NextResponse.json({ success: true });
+      return NextResponse.json({ success: true, counted: Boolean(vote) });
     }
 
-    // Action 2: Update poll status (e.g., publish or close)
     if (action === "updateStatus") {
       const { pollId, status } = body;
-      if (!pollId || !status) {
-        return NextResponse.json(
-          { error: "pollId and status are required" },
-          { status: 400 },
-        );
+      if (!pollId || !["draft", "open", "closed"].includes(status)) {
+        return apiError("invalid_input", "pollId and a valid status are required", 400);
+      }
+
+      // Only the poll creator or the host may change poll state.
+      const isHost = ctx.meeting.hostId === sessionAuth.user.id;
+      const [targetPoll] = await db
+        .select()
+        .from(poll)
+        .where(and(eq(poll.id, pollId), eq(poll.sessionId, ctx.session.id)));
+      if (!targetPoll) return apiError("not_found", "Poll not found", 404);
+      if (!isHost && targetPoll.creatorParticipantId !== ctx.participant.id) {
+        return apiError("forbidden", "Only the creator or host can do that", 403);
       }
 
       const [updatedPoll] = await db
         .update(poll)
-        .set({
-          status,
-          closedAt: status === "closed" ? new Date() : null,
-        })
-        .where(and(eq(poll.id, pollId), eq(poll.sessionId, session.id)))
+        .set({ status, closedAt: status === "closed" ? new Date() : null })
+        .where(eq(poll.id, pollId))
         .returning();
 
       return NextResponse.json({ poll: updatedPoll });
     }
 
-    return NextResponse.json(
-      { error: "Invalid action. Supported: 'vote', 'updateStatus'" },
-      { status: 400 },
-    );
-  } catch (error: any) {
-    return NextResponse.json(
-      { error: error.message || "Failed to update poll" },
-      { status: 500 },
-    );
+    return apiError("invalid_input", "Supported actions: 'vote', 'updateStatus'", 400);
+  } catch (error) {
+    return apiInternalError("meetings/polls#PATCH", error);
   }
 }

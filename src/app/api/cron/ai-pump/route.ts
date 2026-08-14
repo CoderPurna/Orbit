@@ -1,26 +1,25 @@
 import { NextResponse } from "next/server";
 import { runAiPipeline } from "@/lib/ai/pipeline";
+import { requireCronSecret } from "@/lib/cron-auth";
+import { apiInternalError } from "@/lib/api-error";
 
-export async function POST() {
+async function run(req: Request) {
+  const denied = requireCronSecret(req);
+  if (denied) return denied;
+
   try {
     const result = await runAiPipeline();
     return NextResponse.json(result);
-  } catch (error: any) {
-    return NextResponse.json(
-      { error: error.message || "AI pipeline execution failed" },
-      { status: 500 },
-    );
+  } catch (error) {
+    return apiInternalError("cron/ai-pump", error);
   }
 }
 
-export async function GET() {
-  try {
-    const result = await runAiPipeline();
-    return NextResponse.json(result);
-  } catch (error: any) {
-    return NextResponse.json(
-      { error: error.message || "AI pipeline execution failed" },
-      { status: 500 },
-    );
-  }
+// Vercel Cron invokes GET; both verbs are guarded by the cron secret.
+export async function GET(req: Request) {
+  return run(req);
+}
+
+export async function POST(req: Request) {
+  return run(req);
 }

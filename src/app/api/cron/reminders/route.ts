@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
+import { apiInternalError } from "@/lib/api-error";
 import { db } from "@/db/client";
 import { meeting, meetingInvite } from "@/db/schema/meetings";
 import { eq, and, isNull, gte, lte } from "drizzle-orm";
 import { sendEmail } from "@/lib/email";
 import { getReminderEmailHtml } from "@/lib/email-templates";
+import { requireCronSecret } from "@/lib/cron-auth";
 
 async function processMeetingReminders() {
   const now = new Date();
@@ -71,19 +73,13 @@ async function processMeetingReminders() {
 
 export async function GET(req: Request) {
   try {
-    const authHeader = req.headers.get("authorization");
-    const secret = process.env.CRON_SECRET;
-    if (secret && authHeader !== `Bearer ${secret}`) {
-      return NextResponse.json({ error: "Unauthorized cron execution" }, { status: 401 });
-    }
+    const denied = requireCronSecret(req);
+    if (denied) return denied;
 
     const result = await processMeetingReminders();
     return NextResponse.json(result);
-  } catch (error: any) {
-    return NextResponse.json(
-      { error: error.message || "Failed to process meeting reminders" },
-      { status: 500 },
-    );
+  } catch (error) {
+    return apiInternalError("Failed to process meeting reminders", error);
   }
 }
 

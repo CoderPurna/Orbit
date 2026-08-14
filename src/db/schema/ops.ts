@@ -9,12 +9,16 @@ import {
   bigint,
   uuid,
   unique,
+  index,
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { user } from "./auth";
 import { meetingSession, meetingParticipant } from "./meetings";
 import { usageMetricEnum, webhookStatusEnum } from "./enums";
 
-export const usageLedger = pgTable("usage_ledger", {
+export const usageLedger = pgTable(
+  "usage_ledger",
+  {
   id: bigint("id", { mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
   sessionId: uuid("session_id").references(() => meetingSession.id, {
     onDelete: "set null",
@@ -32,7 +36,12 @@ export const usageLedger = pgTable("usage_ledger", {
   recordedAt: timestamp("recorded_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
-});
+  },
+  (table) => [
+    // Metering rollup scans by day + metric
+    index("idx_usage_recorded").on(table.recordedAt, table.metric),
+  ],
+);
 
 export const usageDailyRollup = pgTable(
   "usage_daily_rollup",
@@ -68,7 +77,7 @@ export const auditLog = pgTable("audit_log", {
   action: varchar("action", { length: 60 }).notNull(),
   targetType: varchar("target_type", { length: 40 }).notNull(),
   targetId: varchar("target_id", { length: 64 }),
-  metadata: jsonb("metadata").notNull().default("{}"),
+  metadata: jsonb("metadata").notNull().default({}),
   ipHash: text("ip_hash"),
   userAgent: text("user_agent"),
   createdAt: timestamp("created_at", { withTimezone: true })
@@ -97,5 +106,9 @@ export const webhookEvent = pgTable(
   },
   (table) => [
     unique("idx_webhook_external").on(table.provider, table.externalEventId),
+    // The retry pump's working set (Architecture §7)
+    index("idx_webhook_retry")
+      .on(table.receivedAt)
+      .where(sql`${table.status} IN ('pending', 'failed') AND ${table.attempts} < 5`),
   ],
 );

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { apiInternalError } from "@/lib/api-error";
 import { db } from "@/db/client";
 import { meeting } from "@/db/schema/meetings";
 import { eq, and, isNull } from "drizzle-orm";
@@ -52,10 +53,7 @@ export async function GET(
         "Content-Disposition": `attachment; filename="meeting-${targetMeeting.roomCode}.ics"`,
       },
     });
-  } catch (error: any) {
-    return NextResponse.json(
-      { error: error.message || "Failed to generate ICS file" },
-      { status: 500 },
-    );
+  } catch (error) {
+    return apiInternalError("Failed to generate ICS file", error);
   }
 }

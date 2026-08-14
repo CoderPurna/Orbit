@@ -45,3 +45,5 @@ docs/*
 public/icons/README.md
 skills-lock.json
 .codex/hooks.json
+PRODUCT.md
+.claude

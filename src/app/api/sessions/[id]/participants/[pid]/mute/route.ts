@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
+import { apiInternalError } from "@/lib/api-error";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
 import { db } from "@/db/client";
 import { meetingParticipant, meetingSession, meeting } from "@/db/schema/meetings";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { RoomServiceClient } from "livekit-server-sdk";
+import { logAudit } from "@/lib/audit";
 
 export async function POST(
   req: Request,
@@ -23,10 +25,16 @@ export async function POST(
     const body = await req.json().catch(() => ({}));
     const { mute = true, trackType = "audio" } = body;
 
+    // Scoped to this session — a host can never reach into another meeting.
     const [targetParticipant] = await db
       .select()
       .from(meetingParticipant)
-      .where(eq(meetingParticipant.id, pid));
+      .where(
+        and(
+          eq(meetingParticipant.id, pid),
+          eq(meetingParticipant.sessionId, sessionId),
+        ),
+      );
 
     if (!targetParticipant) {
       return NextResponse.json({ error: "Participant not found" }, { status: 404 });
@@ -76,11 +84,16 @@ export async function POST(
       );
     }
 
+    await logAudit({
+      actorUserId: sessionAuth.user.id,
+      action: "participant.mute",
+      targetType: "participant",
+      targetId: pid,
+      metadata: { sessionId, mute, trackType },
+    });
+
     return NextResponse.json({ success: true, pid, mute, trackType });
-  } catch (error: any) {
-    return NextResponse.json(
-      { error: error.message || "Failed to mute participant" },
-      { status: 500 },
-    );
+  } catch (error) {
+    return apiInternalError("Failed to mute participant", error);
   }
 }

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { apiInternalError } from "@/lib/api-error";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
 import { db } from "@/db/client";
@@ -82,11 +83,8 @@ export async function GET(
       .where(eq(actionItem.summaryId, summaryRecord.id));
 
     return NextResponse.json({ summary: summaryRecord, actionItems });
-  } catch (error: any) {
-    return NextResponse.json(
-      { error: error.message || "Failed to fetch meeting summary" },
-      { status: 500 },
-    );
+  } catch (error) {
+    return apiInternalError("Failed to fetch meeting summary", error);
   }
 }
 
@@ -165,7 +163,7 @@ export async function PATCH(
     }
 
     if (body.tldr !== undefined || body.summaryMarkdown !== undefined) {
-      const updateData: Record<string, any> = {
+      const updateData: Record<string, unknown> = {
         editedByUserId: sessionAuth.user.id,
       };
       if (body.tldr !== undefined) updateData.tldr = body.tldr;
@@ -179,10 +177,7 @@ export async function PATCH(
     }
 
     return NextResponse.json({ success: true });
-  } catch (error: any) {
-    return NextResponse.json(
-      { error: error.message || "Failed to update summary" },
-      { status: 500 },
-    );
+  } catch (error) {
+    return apiInternalError("Failed to update summary", error);
   }
 }

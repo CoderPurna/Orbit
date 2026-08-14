@@ -4,20 +4,26 @@ import { auth } from "@/lib/auth";
 import { db } from "@/db/client";
 import { meetingSession, meeting } from "@/db/schema/meetings";
 import { eq } from "drizzle-orm";
-import { redis } from "@/lib/redis";
 import { RoomServiceClient } from "livekit-server-sdk";
+import { closeSession } from "@/lib/webhooks/livekit-handlers";
+import { findParticipant } from "@/lib/meetings";
+import { apiError, apiInternalError } from "@/lib/api-error";
+import { logAudit } from "@/lib/audit";
+import { logger } from "@/lib/logger";
 
+/**
+ * End-for-all (F11). State is settled here, idempotently with the
+ * room_finished webhook — if LiveKit is unreachable the database still ends
+ * up consistent, and closeSession writes the metering either way.
+ */
 export async function POST(
   _req: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const sessionAuth = await auth.api.getSession({
-      headers: await headers(),
-    });
-
+    const sessionAuth = await auth.api.getSession({ headers: await headers() });
     if (!sessionAuth?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return apiError("unauthorized", "Sign in required", 401);
     }
 
     const { id: sessionId } = await params;
@@ -26,7 +32,6 @@ export async function POST(
       .select({
         sessionId: meetingSession.id,
         meetingId: meetingSession.meetingId,
-        startedAt: meetingSession.startedAt,
         hostId: meeting.hostId,
         livekitRoomName: meeting.livekitRoomName,
       })
@@ -35,58 +40,46 @@ export async function POST(
       .where(eq(meetingSession.id, sessionId));
 
     if (!sess) {
-      return NextResponse.json({ error: "Session not found" }, { status: 404 });
+      return apiError("not_found", "Session not found", 404);
     }
 
-    if (sess.hostId !== sessionAuth.user.id) {
-      return NextResponse.json(
-        { error: "Forbidden: Host permission required" },
-        { status: 403 },
-      );
+    const actorParticipant = await findParticipant(sessionId, sessionAuth.user.id);
+    const isHost = sess.hostId === sessionAuth.user.id;
+    const isCoHost = actorParticipant?.role === "co_host";
+    if (!isHost && !isCoHost) {
+      return apiError("forbidden", "Only the host can end the meeting", 403);
     }
 
-    const endedAt = new Date();
-    const durationSeconds = Math.round(
-      (endedAt.getTime() - sess.startedAt.getTime()) / 1000,
-    );
-
+    await closeSession(sess.meetingId, new Date(), "host_ended");
     await db
-      .update(meetingSession)
-      .set({
-        status: "ended",
-        endedAt,
-        durationSeconds,
-        endReason: "host_ended",
-      })
-      .where(eq(meetingSession.id, sessionId));
-
-    if (redis) {
-      await redis.del(`meeting:${sess.meetingId}:session`);
-    }
+      .update(meeting)
+      .set({ status: "ended", updatedAt: new Date() })
+      .where(eq(meeting.id, sess.meetingId));
 
     const apiKey = process.env.LIVEKIT_API_KEY;
     const apiSecret = process.env.LIVEKIT_API_SECRET;
     const wsUrl = process.env.NEXT_PUBLIC_LIVEKIT_URL;
-
     if (apiKey && apiSecret && wsUrl) {
       const roomClient = new RoomServiceClient(
         wsUrl.replace(/^ws/, "http"),
         apiKey,
         apiSecret,
       );
-      await roomClient.deleteRoom(sess.livekitRoomName).catch(() => null);
+      await roomClient.deleteRoom(sess.livekitRoomName).catch((err) => {
+        logger.error({ err, sessionId }, "LiveKit deleteRoom failed");
+      });
     }
 
-    return NextResponse.json({
-      success: true,
-      sessionId,
-      status: "ended",
-      durationSeconds,
+    await logAudit({
+      actorUserId: sessionAuth.user.id,
+      actorParticipantId: actorParticipant?.id ?? null,
+      action: "meeting.end",
+      targetType: "session",
+      targetId: sessionId,
     });
-  } catch (error: any) {
-    return NextResponse.json(
-      { error: error.message || "Failed to end session" },
-      { status: 500 },
-    );
+
+    return NextResponse.json({ success: true, sessionId, status: "ended" });
+  } catch (error) {
+    return apiInternalError("sessions/end", error);
   }
 }

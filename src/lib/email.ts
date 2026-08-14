@@ -30,8 +30,8 @@ export async function sendEmail({ to, subject, html }: SendEmailParams) {
     }
 
     return data;
-  } catch (err: any) {
-    console.error("Failed to send email via Resend:", err.message);
+  } catch (err) {
+    console.error("Failed to send email via Resend:", err instanceof Error ? err.message : err);
     return null;
   }
 }

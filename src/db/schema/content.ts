@@ -10,12 +10,17 @@ import {
   char,
   uuid,
   unique,
+  index,
+  check,
   AnyPgColumn,
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { meetingSession, meetingParticipant } from "./meetings";
 import { messageTypeEnum, scanStatusEnum, pollStatusEnum } from "./enums";
 
-export const attachment = pgTable("attachment", {
+export const attachment = pgTable(
+  "attachment",
+  {
   id: uuid("id").defaultRandom().primaryKey(),
   sessionId: uuid("session_id")
     .notNull()
@@ -38,9 +43,18 @@ export const attachment = pgTable("attachment", {
   createdAt: timestamp("created_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
-});
+  },
+  (table) => [
+    // 25 MB cap (F23)
+    check("chk_attachment_size", sql`${table.sizeBytes} <= 26214400`),
+    index("idx_attachment_expiry").on(table.expiresAt),
+    index("idx_attachment_session").on(table.sessionId),
+  ],
+);
 
-export const chatMessage = pgTable("chat_message", {
+export const chatMessage = pgTable(
+  "chat_message",
+  {
   id: varchar("id", { length: 26 }).primaryKey(),
   sessionId: uuid("session_id")
     .notNull()
@@ -69,7 +83,20 @@ export const chatMessage = pgTable("chat_message", {
   sentAt: timestamp("sent_at", { withTimezone: true }).notNull().defaultNow(),
   editedAt: timestamp("edited_at", { withTimezone: true }),
   deletedAt: timestamp("deleted_at", { withTimezone: true }),
-});
+  },
+  (table) => [
+    check("chk_chat_body_length", sql`${table.body} IS NULL OR length(${table.body}) <= 4000`),
+    // A DM must have a recipient (DB Model §4.9)
+    check(
+      "chk_chat_private_recipient",
+      sql`${table.isPrivate} = false OR ${table.recipientParticipantId} IS NOT NULL`,
+    ),
+    // Chat history pagination
+    index("idx_chat_session_sent")
+      .on(table.sessionId, table.sentAt.desc())
+      .where(sql`${table.deletedAt} IS NULL`),
+  ],
+);
 
 export const reaction = pgTable("reaction", {
   id: uuid("id").defaultRandom().primaryKey(),
