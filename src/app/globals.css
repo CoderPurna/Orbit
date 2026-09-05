@@ -1,5 +1,6 @@
-@import "tailwindcss";
-@import "tw-animate-css";
+@import url('https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Instrument+Serif:ital@0;1&family=IBM+Plex+Mono:wght@400;500&display=swap');
+@import 'tailwindcss';
+@import 'tw-animate-css';
 
 /* ============================================================
    Orbit — globals.css
@@ -9,9 +10,9 @@
    Accent = Pine  #3FB27A room / #1A6B44 paper
    ============================================================ */
 
-@custom-variant dark (&:is(.dark *));
+@custom-variant dark (&:where(.dark, .dark *));
 
-@theme inline {
+@theme {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
 
@@ -38,22 +39,19 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
 
-  /* Orbit semantics — never colour alone, always paired with an icon or label */
-  --color-signal: var(--signal);                     /* primary action */
+  --color-signal: var(--signal);
   --color-signal-foreground: var(--signal-foreground);
-  --color-signal-muted: var(--signal-muted);         /* accent text, links */
-  --color-shield: var(--shield);                     /* E2EE, retention, "not stored" */
+  --color-signal-muted: var(--signal-muted);
+  --color-shield: var(--shield);
   --color-shield-foreground: var(--shield-foreground);
   --color-shield-subtle: var(--shield-subtle);
-  --color-caution: var(--caution);                   /* degraded network, video paused */
+  --color-caution: var(--caution);
   --color-caution-foreground: var(--caution-foreground);
   --color-caution-subtle: var(--caution-subtle);
-  --color-record: var(--record);                     /* recording + destructive only */
+  --color-record: var(--record);
   --color-record-foreground: var(--record-foreground);
   --color-record-subtle: var(--record-subtle);
 
-  /* The room surface. Video panels stay dark in BOTH modes — a bright frame
-     around a dim webcam feed makes the face look worse. */
   --color-room: var(--room);
   --color-room-surface: var(--room-surface);
   --color-room-raised: var(--room-raised);
@@ -76,21 +74,20 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
 
-  --radius-sm: calc(var(--radius) * 0.6);   /*  8px — inputs, small chips     */
-  --radius-md: calc(var(--radius) * 0.8);   /* 11px — nested cards            */
-  --radius-lg: var(--radius);               /* 14px — cards, panels           */
-  --radius-xl: calc(var(--radius) * 1.15);  /* 16px — video tiles             */
-  --radius-2xl: calc(var(--radius) * 1.3);  /* 18px — control bar, shells     */
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.15);
+  --radius-2xl: calc(var(--radius) * 1.3);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
 
-  /* Motion — every duration explains a state change, none decorate */
   --ease-out-quart: cubic-bezier(0.2, 0.8, 0.2, 1);
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
-  --duration-press: 120ms;   /* button press, toggle, hover                  */
-  --duration-panel: 180ms;   /* panel slide, tooltip, badge appear           */
-  --duration-tile: 260ms;    /* tile enter/leave, layout reflow              */
-  --duration-stage: 420ms;   /* join-sequence step, speaker promotion        */
+  --duration-press: 120ms;
+  --duration-panel: 180ms;
+  --duration-tile: 260ms;
+  --duration-stage: 420ms;
 
   --animate-tile-in: tile-in var(--duration-tile) var(--ease-out-quart) both;
   --animate-panel-in: panel-in var(--duration-panel) var(--ease-out-quart) both;
@@ -102,42 +99,46 @@
 
 /* ---------- Paper surface (light) ---------- */
 :root {
-  --background: oklch(0.968 0.005 75);        /* #F6F4F1 warm, not pure white */
-  --foreground: oklch(0.176 0.006 285);       /* #101014 */
-  --card: oklch(1 0 0);                       /* #FFFFFF */
+  --font-instrument-sans: 'Instrument Sans', system-ui, sans-serif;
+  --font-ibm-plex-mono: 'IBM Plex Mono', 'Courier New', monospace;
+  --font-instrument-serif: 'Instrument Serif', Georgia, serif;
+
+  --background: oklch(0.968 0.005 75);
+  --foreground: oklch(0.176 0.006 285);
+  --card: oklch(1 0 0);
   --card-foreground: oklch(0.176 0.006 285);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.176 0.006 285);
 
-  --primary: oklch(0.446 0.098 158);          /* #1A6B44 — deepened for paper */
-  --primary-foreground: oklch(1 0 0);         /* white, 5.9:1                 */
-  --secondary: oklch(0.941 0.007 80);         /* #F0EDE8 */
+  --primary: oklch(0.446 0.098 158);
+  --primary-foreground: oklch(1 0 0);
+  --secondary: oklch(0.941 0.007 80);
   --secondary-foreground: oklch(0.176 0.006 285);
   --muted: oklch(0.941 0.007 80);
-  --muted-foreground: oklch(0.503 0.014 285); /* #63636F */
+  --muted-foreground: oklch(0.503 0.014 285);
   --accent: oklch(0.941 0.007 80);
   --accent-foreground: oklch(0.176 0.006 285);
 
-  --destructive: oklch(0.478 0.170 28);       /* #B32C22 */
+  --destructive: oklch(0.478 0.170 28);
   --destructive-foreground: oklch(1 0 0);
-  --border: oklch(0.902 0.008 80);            /* #E4E0DA */
+  --border: oklch(0.902 0.008 80);
   --input: oklch(0.902 0.008 80);
   --ring: oklch(0.446 0.098 158);
 
-  --signal: oklch(0.446 0.098 158);           /* #1A6B44 */
+  --signal: oklch(0.446 0.098 158);
   --signal-foreground: oklch(1 0 0);
-  --signal-muted: oklch(0.408 0.089 158);     /* #175E3C — accent text        */
-  --shield: oklch(0.446 0.070 227);           /* #17627E */
+  --signal-muted: oklch(0.408 0.089 158);
+  --shield: oklch(0.446 0.070 227);
   --shield-foreground: oklch(1 0 0);
-  --shield-subtle: oklch(0.960 0.018 227);    /* #E6F4FA — badge fill         */
-  --caution: oklch(0.455 0.086 82);           /* #7D5B0D */
+  --shield-subtle: oklch(0.960 0.018 227);
+  --caution: oklch(0.455 0.086 82);
   --caution-foreground: oklch(1 0 0);
-  --caution-subtle: oklch(0.968 0.031 90);    /* #FBF3DE */
-  --record: oklch(0.478 0.170 28);            /* #B32C22 */
+  --caution-subtle: oklch(0.968 0.031 90);
+  --record: oklch(0.478 0.170 28);
   --record-foreground: oklch(1 0 0);
-  --record-subtle: oklch(0.955 0.019 25);     /* #FDECEA */
+  --record-subtle: oklch(0.955 0.019 25);
 
-  --radius: 0.875rem;                         /* 14px */
+  --radius: 0.875rem;
 
   --chart-1: oklch(0.446 0.098 158);
   --chart-2: oklch(0.446 0.070 227);
@@ -157,38 +158,38 @@
 
 /* ---------- Room surface (dark) ---------- */
 .dark {
-  --background: oklch(0.145 0.003 265);       /* #0A0B0D */
-  --foreground: oklch(0.937 0.003 265);       /* #ECEDF0 */
-  --card: oklch(0.196 0.008 265);             /* #12141A */
+  --background: oklch(0.145 0.003 265);
+  --foreground: oklch(0.937 0.003 265);
+  --card: oklch(0.196 0.008 265);
   --card-foreground: oklch(0.937 0.003 265);
   --popover: oklch(0.196 0.008 265);
   --popover-foreground: oklch(0.937 0.003 265);
 
-  --primary: oklch(0.672 0.135 158);          /* #3FB27A — full value on near-black */
-  --primary-foreground: oklch(0.180 0.028 160); /* #04190F, 6.9:1               */
-  --secondary: oklch(0.266 0.011 265);        /* #1F232B */
+  --primary: oklch(0.672 0.135 158);
+  --primary-foreground: oklch(0.180 0.028 160);
+  --secondary: oklch(0.266 0.011 265);
   --secondary-foreground: oklch(0.937 0.003 265);
   --muted: oklch(0.266 0.011 265);
-  --muted-foreground: oklch(0.694 0.015 265); /* #9AA0AC */
+  --muted-foreground: oklch(0.694 0.015 265);
   --accent: oklch(0.266 0.011 265);
   --accent-foreground: oklch(0.937 0.003 265);
 
-  --destructive: oklch(0.628 0.213 27);       /* #F04438 */
+  --destructive: oklch(0.628 0.213 27);
   --destructive-foreground: oklch(1 0 0);
-  --border: oklch(0.283 0.010 265);           /* #22252D */
-  --input: oklch(0.345 0.012 265);            /* #2E333D */
+  --border: oklch(0.283 0.010 265);
+  --input: oklch(0.345 0.012 265);
   --ring: oklch(0.672 0.135 158);
 
-  --signal: oklch(0.672 0.135 158);           /* #3FB27A */
+  --signal: oklch(0.672 0.135 158);
   --signal-foreground: oklch(0.180 0.028 160);
-  --signal-muted: oklch(0.807 0.113 157);     /* #77D3A5 */
-  --shield: oklch(0.771 0.098 225);           /* #62C6E8 */
+  --signal-muted: oklch(0.807 0.113 157);
+  --shield: oklch(0.771 0.098 225);
   --shield-foreground: oklch(0.180 0.028 225);
   --shield-subtle: oklch(0.771 0.098 225 / 12%);
-  --caution: oklch(0.812 0.135 82);           /* #F5B944 */
+  --caution: oklch(0.812 0.135 82);
   --caution-foreground: oklch(0.180 0.028 82);
   --caution-subtle: oklch(0.812 0.135 82 / 12%);
-  --record: oklch(0.727 0.155 25);            /* #FF8078 text on dark        */
+  --record: oklch(0.727 0.155 25);
   --record-foreground: oklch(1 0 0);
   --record-subtle: oklch(0.628 0.213 27 / 14%);
 
@@ -208,17 +209,14 @@
   --sidebar-ring: oklch(0.672 0.135 158);
 }
 
-/* ---------- Room tokens: identical in both modes ----------
-   A video panel is a window onto a feed, not a piece of interface.
-   It keeps its own surface even on the paper theme. */
 :root,
 .dark {
-  --room: oklch(0.145 0.003 265);             /* #0A0B0D */
-  --room-surface: oklch(0.196 0.008 265);     /* #12141A */
-  --room-raised: oklch(0.266 0.011 265);      /* #1F232B */
-  --room-border: oklch(0.345 0.012 265);      /* #2E333D */
-  --room-foreground: oklch(0.937 0.003 265);  /* #ECEDF0 */
-  --room-muted: oklch(0.694 0.015 265);       /* #9AA0AC */
+  --room: oklch(0.145 0.003 265);
+  --room-surface: oklch(0.196 0.008 265);
+  --room-raised: oklch(0.266 0.011 265);
+  --room-border: oklch(0.345 0.012 265);
+  --room-foreground: oklch(0.937 0.003 265);
+  --room-muted: oklch(0.694 0.015 265);
 }
 
 @layer base {
@@ -239,7 +237,6 @@
     letter-spacing: -0.03em;
     text-wrap: balance;
   }
-  /* Room codes, timers, metrics, labels. Never for prose. */
   code, kbd, samp, .tabular {
     @apply font-mono;
     font-variant-numeric: tabular-nums;
@@ -248,7 +245,6 @@
     background: var(--signal);
     color: var(--signal-foreground);
   }
-  /* Control-bar targets are 48px and never smaller — 44px minimum on touch. */
   button, [role="button"] {
     cursor: pointer;
   }
@@ -259,7 +255,6 @@
 }
 
 @layer utilities {
-  /* Video panels: dark in both themes */
   .surface-room {
     background: var(--room);
     color: var(--room-foreground);
@@ -269,7 +264,6 @@
     color: var(--room-foreground);
     border-color: var(--room-border);
   }
-  /* Frosted chrome that floats over live video */
   .chrome-float {
     background: color-mix(in oklab, var(--room-surface) 92%, transparent);
     backdrop-filter: blur(16px);
@@ -302,13 +296,22 @@
   from { transform: rotate(0deg); }
   to   { transform: rotate(360deg); }
 }
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+.animate-marquee {
+  animation: marquee 28s linear infinite;
+}
+.animate-marquee:hover {
+  animation-play-state: paused;
+}
 
 .animate-orbit {
   transform-origin: 24px 24px;
   animation: orbit 7s linear infinite;
 }
 
-/* Motion is explanatory, so it collapses to opacity rather than disappearing. */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
@@ -318,3 +321,6 @@
   }
 }
 
+html, body, #root {
+  height: 100%;
+}
