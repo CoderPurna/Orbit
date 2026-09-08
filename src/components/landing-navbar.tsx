@@ -2,9 +2,20 @@
 
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Sparkles, Moon, Sun, Menu, X } from "lucide-react";
+import { Phone, Moon, Sun, Menu, X, LogOut, LayoutDashboard, User } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useSession, signOut } from "@/lib/auth-client";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Skeleton } from "@/components/ui/skeleton";
 
 import { OrbitLogo } from "@/components/orbit-logo";
 
@@ -19,9 +30,17 @@ export function LandingNavbar({
   const [mounted, setMounted] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
+  const { data: session, isPending } = useSession();
+  const router = useRouter();
+  
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  const handleSignOut = async () => {
+    await signOut();
+    router.refresh();
+  };
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 flex flex-col items-center px-4 pt-4">
@@ -45,7 +64,7 @@ export function LandingNavbar({
 
         <div className="flex items-center gap-1 sm:gap-2">
           <div className="hidden md:block">
-            {mounted && (
+            {mounted ? (
               <Button
                 variant="ghost"
                 size="icon"
@@ -55,26 +74,63 @@ export function LandingNavbar({
               >
                 {resolvedTheme === "dark" ? <Sun size={15} /> : <Moon size={15} />}
               </Button>
+            ) : (
+              <Skeleton className="h-9 w-9 rounded-full" />
             )}
           </div>
           
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onSignIn}
-            className="hidden sm:flex text-xs h-9 rounded-full px-4 hover:bg-muted/80 text-muted-foreground hover:text-foreground"
-          >
-            Sign in
-          </Button>
-          <Button
-            size="sm"
-            onClick={onSignUp}
-            className="text-xs h-9 rounded-full px-4 sm:px-5 bg-foreground text-background hover:bg-foreground/90 transition-transform active:scale-95 shadow-sm"
-          >
-            <span className="hidden sm:inline">Launch call</span>
-            <span className="sm:hidden">Start</span>
-            <Sparkles size={13} className="ml-1 sm:ml-1.5 text-[var(--signal)]" />
-          </Button>
+          {isPending ? (
+            <div className="flex items-center gap-2">
+              <Skeleton className="hidden sm:block h-9 w-16 rounded-full" />
+              <Skeleton className="h-9 w-24 sm:w-28 rounded-full" />
+            </div>
+          ) : session?.user ? (
+            <div className="hidden sm:block">
+              <DropdownMenu>
+                <DropdownMenuTrigger render={<Button variant="ghost" className="relative h-9 w-9 rounded-full ml-2" />}>
+                  <Avatar className="h-9 w-9">
+                    <AvatarImage src={session.user.image || ""} alt={session.user.name || "User"} />
+                    <AvatarFallback>{session.user.name?.[0]?.toUpperCase() || "U"}</AvatarFallback>
+                  </Avatar>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-48" align="end">
+                  <DropdownMenuItem onClick={() => router.push('/dashboard')}>
+                    <LayoutDashboard className="mr-2 h-4 w-4" />
+                    <span>Dashboard</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => router.push('/profile')}>
+                    <User className="mr-2 h-4 w-4" />
+                    <span>Profile</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleSignOut} className="text-destructive focus:bg-destructive/10">
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>Log out</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          ) : (
+            <>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => router.push("/signin")}
+                className="hidden sm:flex text-xs h-9 rounded-full px-4 hover:bg-muted/80 text-muted-foreground hover:text-foreground"
+              >
+                Sign in
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => router.push("/signup")}
+                className="text-xs h-9 rounded-full px-4 sm:px-5 bg-foreground text-background hover:bg-foreground/90 transition-transform active:scale-95 shadow-sm"
+              >
+                <span className="hidden sm:inline">Launch call</span>
+                <span className="sm:hidden">Start</span>
+                <Phone size={13} className="ml-1 sm:ml-1.5 text-[var(--signal)]" />
+              </Button>
+            </>
+          )}
           
           <Button
             variant="ghost"
@@ -102,7 +158,7 @@ export function LandingNavbar({
           
           <div className="flex items-center justify-between">
              <span className="text-sm font-medium text-muted-foreground">Theme</span>
-             {mounted && (
+             {mounted ? (
               <Button
                 variant="secondary"
                 size="icon"
@@ -112,15 +168,56 @@ export function LandingNavbar({
               >
                 {resolvedTheme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
               </Button>
+            ) : (
+              <Skeleton className="h-10 w-10 rounded-full" />
             )}
           </div>
           
-          <Button variant="outline" className="w-full h-12 rounded-full text-sm font-medium" onClick={() => {
-            onSignIn?.();
-            setIsMobileMenuOpen(false);
-          }}>
-            Sign in to your account
-          </Button>
+          {isPending ? (
+            <div className="flex flex-col gap-2">
+              <Skeleton className="w-full h-12 rounded-full" />
+              <Skeleton className="w-full h-12 rounded-full" />
+            </div>
+          ) : session?.user ? (
+            <div className="flex flex-col gap-2">
+              <Button variant="outline" className="w-full h-12 rounded-full text-sm font-medium justify-start px-4" onClick={() => {
+                router.push('/dashboard');
+                setIsMobileMenuOpen(false);
+              }}>
+                <LayoutDashboard className="mr-2 h-4 w-4" />
+                Dashboard
+              </Button>
+              <Button variant="outline" className="w-full h-12 rounded-full text-sm font-medium justify-start px-4" onClick={() => {
+                router.push('/profile');
+                setIsMobileMenuOpen(false);
+              }}>
+                <User className="mr-2 h-4 w-4" />
+                Profile
+              </Button>
+              <Button variant="outline" className="w-full h-12 rounded-full text-sm font-medium justify-start px-4 text-destructive hover:text-destructive hover:bg-destructive/10" onClick={() => {
+                handleSignOut();
+                setIsMobileMenuOpen(false);
+              }}>
+                <LogOut className="mr-2 h-4 w-4" />
+                Log out
+              </Button>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-2">
+              <Button variant="outline" className="w-full h-12 rounded-full text-sm font-medium" onClick={() => {
+                router.push('/signin');
+                setIsMobileMenuOpen(false);
+              }}>
+                Sign in to your account
+              </Button>
+              <Button className="w-full h-12 rounded-full text-sm font-medium bg-foreground text-background" onClick={() => {
+                router.push('/signup');
+                setIsMobileMenuOpen(false);
+              }}>
+                Create your workspace
+              </Button>
+            </div>
+          )}
         </div>
       )}
     </header>

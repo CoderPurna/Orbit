@@ -269,6 +269,21 @@
     backdrop-filter: blur(16px);
     border: 1px solid var(--room-border);
   }
+  
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 4px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: var(--muted-foreground);
+  }
 }
 
 @keyframes tile-in {
@@ -324,3 +339,5 @@
 html, body, #root {
   height: 100%;
 }
+
+
