@@ -34,7 +34,11 @@ export async function POST(
       rateLimit("token:user", session.user.id, 10, 60),
     ]);
     if (!ipOk || !userOk) {
-      return apiError("rate_limited", "Too many join attempts — slow down", 429);
+      return apiError(
+        "rate_limited",
+        "Too many join attempts — slow down",
+        429,
+      );
     }
 
     const body = (await req.json().catch(() => ({}))) as {
@@ -50,8 +54,12 @@ export async function POST(
 
     let presenceCount: number | null = null;
     if (redis) {
-      const presence = await redis.get(`presence:${liveSession.id}`);
-      presenceCount = presence != null ? Number(presence) : null;
+      try {
+        const presence = await redis.get(`presence:${liveSession.id}`);
+        presenceCount = presence != null ? Number(presence) : null;
+      } catch (err) {
+        // Fall back to null if Redis is offline
+      }
     }
 
     const join = await resolveJoin({
@@ -67,7 +75,8 @@ export async function POST(
 
     const apiKey = process.env.LIVEKIT_API_KEY;
     const apiSecret = process.env.LIVEKIT_API_SECRET;
-    const wsUrl = process.env.NEXT_PUBLIC_LIVEKIT_URL;
+    const wsUrl =
+      process.env.NEXT_PUBLIC_LIVEKIT_URL || process.env.LIVEKIT_URL;
     if (!apiKey || !apiSecret || !wsUrl) {
       return apiError(
         "media_not_configured",
@@ -78,7 +87,8 @@ export async function POST(
 
     const userId = session.user.id;
     const identity = livekitIdentityFor(userId);
-    const displayName = session.user.name || session.user.email || "Participant";
+    const displayName =
+      session.user.name || session.user.email || "Participant";
 
     const participant = await ensureParticipant(
       liveSession.id,

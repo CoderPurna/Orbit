@@ -3,6 +3,8 @@ import { meeting, meetingParticipant } from "@/db/schema/meetings";
 import { user } from "@/db/schema/auth";
 import { eq, or, and, isNull } from "drizzle-orm";
 import { redis } from "@/lib/redis";
+import { isMeetingId } from "@/lib/room-code-format";
+import { logger } from "@/lib/logger";
 
 /**
  * Internal (server-only) meeting shape: the full row plus the host's display
@@ -28,32 +30,44 @@ export async function resolveMeeting(
   const cacheKey = `code:${idOrCode}`;
 
   if (redis) {
-    const cached = await redis.get(cacheKey);
-    if (cached) {
-      const parsed = (
-        typeof cached === "string" ? JSON.parse(cached) : cached
-      ) as ResolvedMeeting;
-      return reviveDates(parsed);
+    try {
+      const cached = await redis.get(cacheKey);
+      if (cached) {
+        const parsed = (
+          typeof cached === "string" ? JSON.parse(cached) : cached
+        ) as ResolvedMeeting;
+        return reviveDates(parsed);
+      }
+    } catch (err) {
+      // The cache keeps Postgres off the join hot path (ADR-004); it is not an
+      // availability dependency. A Redis outage degrades latency, not service.
+      logger.warn({ err, cacheKey }, "meeting cache read failed — using Postgres");
     }
   }
+
+  // `meeting.id` is a uuid column: comparing it against a room code makes
+  // Postgres throw `invalid input syntax for type uuid` rather than miss, so
+  // only include that arm when the input actually is a UUID.
+  const match = isMeetingId(idOrCode)
+    ? or(eq(meeting.id, idOrCode), eq(meeting.roomCode, idOrCode))
+    : eq(meeting.roomCode, idOrCode);
 
   const [result] = await db
     .select({ meeting, hostName: user.name })
     .from(meeting)
     .leftJoin(user, eq(meeting.hostId, user.id))
-    .where(
-      and(
-        or(eq(meeting.id, idOrCode), eq(meeting.roomCode, idOrCode)),
-        isNull(meeting.deletedAt),
-      ),
-    );
+    .where(and(match, isNull(meeting.deletedAt)));
 
   if (!result) return null;
 
   const resolved: ResolvedMeeting = { ...result.meeting, hostName: result.hostName };
 
   if (redis) {
-    await redis.setex(cacheKey, CODE_CACHE_TTL, JSON.stringify(resolved));
+    try {
+      await redis.setex(cacheKey, CODE_CACHE_TTL, JSON.stringify(resolved));
+    } catch (err) {
+      logger.warn({ err, cacheKey }, "meeting cache write failed");
+    }
   }
 
   return resolved;
@@ -63,10 +77,15 @@ export async function resolveMeeting(
 export async function cacheMeeting(resolved: ResolvedMeeting): Promise<void> {
   if (!redis) return;
   const body = JSON.stringify(resolved);
-  await Promise.all([
-    redis.setex(`code:${resolved.roomCode}`, CODE_CACHE_TTL, body),
-    redis.setex(`code:${resolved.id}`, CODE_CACHE_TTL, body),
-  ]);
+  try {
+    await Promise.all([
+      redis.setex(`code:${resolved.roomCode}`, CODE_CACHE_TTL, body),
+      redis.setex(`code:${resolved.id}`, CODE_CACHE_TTL, body),
+    ]);
+  } catch (err) {
+    // Priming is an optimisation — the first join falls back to Postgres.
+    logger.warn({ err, id: resolved.id }, "meeting cache prime failed");
+  }
 }
 
 export async function invalidateMeetingCache(m: {
@@ -74,10 +93,17 @@ export async function invalidateMeetingCache(m: {
   roomCode: string;
 }): Promise<void> {
   if (!redis) return;
-  await Promise.all([
-    redis.del(`code:${m.id}`),
-    redis.del(`code:${m.roomCode}`),
-  ]);
+  try {
+    await Promise.all([
+      redis.del(`code:${m.id}`),
+      redis.del(`code:${m.roomCode}`),
+    ]);
+  } catch (err) {
+    // The DB write has already committed; throwing here would 500 a mutation
+    // that succeeded. Log loudly instead — a surviving entry can serve stale
+    // gate flags (lock, passcode) until CODE_CACHE_TTL expires.
+    logger.error({ err, id: m.id }, "meeting cache invalidation failed — entry may be stale");
+  }
 }
 
 /** Serialized Date fields come back from Redis as ISO strings. */

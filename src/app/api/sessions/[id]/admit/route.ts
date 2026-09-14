@@ -32,14 +32,22 @@ export async function POST(
 
     const { id: sessionId } = await params;
     const body = await req.json().catch(() => ({}));
-    const { entryId, participantId, action = "admit" } = body as {
+    const {
+      entryId,
+      participantId,
+      action = "admit",
+    } = body as {
       entryId?: string;
       participantId?: string;
       action?: string;
     };
 
     if (!entryId && !participantId) {
-      return apiError("invalid_input", "entryId or participantId is required", 400);
+      return apiError(
+        "invalid_input",
+        "entryId or participantId is required",
+        400,
+      );
     }
 
     const [sess] = await db
@@ -55,7 +63,10 @@ export async function POST(
       return apiError("not_found", "Session not found", 404);
     }
 
-    const actorParticipant = await findParticipant(sessionId, sessionAuth.user.id);
+    const actorParticipant = await findParticipant(
+      sessionId,
+      sessionAuth.user.id,
+    );
     const isHost = sess.hostId === sessionAuth.user.id;
     const isCoHost = actorParticipant?.role === "co_host";
     if (!isHost && !isCoHost) {
@@ -79,7 +90,11 @@ export async function POST(
       );
 
     if (!entry) {
-      return apiError("not_found", "No pending knock found for this session", 404);
+      return apiError(
+        "not_found",
+        "No pending knock found for this session",
+        404,
+      );
     }
 
     const admitted = action === "admit";
@@ -100,14 +115,19 @@ export async function POST(
         .set(
           admitted
             ? { state: "active", updatedAt: new Date() }
-            : { state: "removed", leaveReason: "removed", updatedAt: new Date() },
+            : {
+                state: "removed",
+                leaveReason: "removed",
+                updatedAt: new Date(),
+              },
         )
         .where(eq(meetingParticipant.id, entry.participantId));
     }
 
     const apiKey = process.env.LIVEKIT_API_KEY;
     const apiSecret = process.env.LIVEKIT_API_SECRET;
-    const wsUrl = process.env.NEXT_PUBLIC_LIVEKIT_URL;
+    const wsUrl =
+      process.env.NEXT_PUBLIC_LIVEKIT_URL || process.env.LIVEKIT_URL;
 
     if (apiKey && apiSecret && wsUrl && entry.userId) {
       const identity = livekitIdentityFor(entry.userId);
@@ -166,8 +186,14 @@ export async function GET(
       .where(eq(meetingSession.id, sessionId));
     if (!sess) return apiError("not_found", "Session not found", 404);
 
-    const actorParticipant = await findParticipant(sessionId, sessionAuth.user.id);
-    if (sess.hostId !== sessionAuth.user.id && actorParticipant?.role !== "co_host") {
+    const actorParticipant = await findParticipant(
+      sessionId,
+      sessionAuth.user.id,
+    );
+    if (
+      sess.hostId !== sessionAuth.user.id &&
+      actorParticipant?.role !== "co_host"
+    ) {
       return apiError("forbidden", "Host permission required", 403);
     }
 

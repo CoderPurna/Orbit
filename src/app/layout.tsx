@@ -1,6 +1,7 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Playfair_Display } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
+import { Providers } from "@/components/providers";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -23,12 +24,27 @@ export const metadata: Metadata = {
     default: "Orbit — Ultra-low Latency Video & AI Meeting Infrastructure",
     template: "%s | Orbit",
   },
-  description: "Ultra-low latency web video meetings with AI summaries and privacy-first architecture.",
+  description:
+    "Ultra-low latency web video meetings with AI summaries and privacy-first architecture.",
   manifest: "/site.webmanifest",
   icons: {
     icon: { url: "/icons/favicon.svg", type: "image/svg+xml" },
-    apple: { url: "/icons/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
+    apple: {
+      url: "/icons/apple-touch-icon.png",
+      sizes: "180x180",
+      type: "image/png",
+    },
   },
+};
+
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f6f4f0" },
+    { media: "(prefers-color-scheme: dark)", color: "#151517" },
+  ],
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
@@ -42,14 +58,14 @@ export default function RootLayout({
       suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} ${playfairDisplay.variable} h-full antialiased`}
     >
-      <body className="flex min-h-full flex-col bg-background text-foreground transition-colors duration-200">
+      <body className="bg-background text-foreground flex min-h-full flex-col transition-colors duration-200">
         <ThemeProvider
           attribute="class"
           defaultTheme="light"
           enableSystem
           disableTransitionOnChange
         >
-          {children}
+          <Providers>{children}</Providers>
         </ThemeProvider>
       </body>
     </html>

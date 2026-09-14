@@ -3,6 +3,7 @@ import { meetingSession, meetingParticipant } from "@/db/schema/meetings";
 import { eq, and, desc, sql } from "drizzle-orm";
 import { redis } from "@/lib/redis";
 import { livekitIdentityFor } from "@/lib/meetings";
+import { logger } from "@/lib/logger";
 
 /**
  * Fetch the live session for a meeting, creating the next occurrence if none
@@ -17,18 +18,22 @@ export async function ensureActiveSession(
   const cacheKey = `meeting:${meetingId}:session`;
 
   if (redis) {
-    const cachedId = await redis.get(cacheKey);
-    if (cachedId) {
-      const [cached] = await db
-        .select()
-        .from(meetingSession)
-        .where(
-          and(
-            eq(meetingSession.id, String(cachedId)),
-            eq(meetingSession.status, "live"),
-          ),
-        );
-      if (cached) return cached;
+    try {
+      const cachedId = await redis.get(cacheKey);
+      if (cachedId) {
+        const [cached] = await db
+          .select()
+          .from(meetingSession)
+          .where(
+            and(
+              eq(meetingSession.id, String(cachedId)),
+              eq(meetingSession.status, "live"),
+            ),
+          );
+        if (cached) return cached;
+      }
+    } catch (err) {
+      logger.warn({ err, cacheKey }, "session cache read failed — falling back to DB");
     }
   }
 
@@ -86,7 +91,11 @@ export async function ensureActiveSession(
   if (!session) throw new Error("Failed to create meeting session");
 
   if (redis) {
-    await redis.set(cacheKey, session.id, { ex: 3600 });
+    try {
+      await redis.set(cacheKey, session.id, { ex: 3600 });
+    } catch (err) {
+      logger.warn({ err, cacheKey }, "session cache write failed");
+    }
   }
 
   return session;

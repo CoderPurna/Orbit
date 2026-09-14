@@ -43,7 +43,10 @@ export async function POST(
       return apiError("not_found", "Session not found", 404);
     }
 
-    const actorParticipant = await findParticipant(sessionId, sessionAuth.user.id);
+    const actorParticipant = await findParticipant(
+      sessionId,
+      sessionAuth.user.id,
+    );
     const isHost = sess.hostId === sessionAuth.user.id;
     const isCoHost = actorParticipant?.role === "co_host";
     if (!isHost && !isCoHost) {
@@ -58,7 +61,8 @@ export async function POST(
 
     const apiKey = process.env.LIVEKIT_API_KEY;
     const apiSecret = process.env.LIVEKIT_API_SECRET;
-    const wsUrl = process.env.NEXT_PUBLIC_LIVEKIT_URL;
+    const wsUrl =
+      process.env.NEXT_PUBLIC_LIVEKIT_URL || process.env.LIVEKIT_URL;
     if (apiKey && apiSecret && wsUrl) {
       const roomClient = new RoomServiceClient(
         wsUrl.replace(/^ws/, "http"),

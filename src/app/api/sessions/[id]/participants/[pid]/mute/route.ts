@@ -3,7 +3,11 @@ import { apiInternalError } from "@/lib/api-error";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
 import { db } from "@/db/client";
-import { meetingParticipant, meetingSession, meeting } from "@/db/schema/meetings";
+import {
+  meetingParticipant,
+  meetingSession,
+  meeting,
+} from "@/db/schema/meetings";
 import { eq, and } from "drizzle-orm";
 import { RoomServiceClient } from "livekit-server-sdk";
 import { logAudit } from "@/lib/audit";
@@ -37,11 +41,17 @@ export async function POST(
       );
 
     if (!targetParticipant) {
-      return NextResponse.json({ error: "Participant not found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Participant not found" },
+        { status: 404 },
+      );
     }
 
     const [sess] = await db
-      .select({ hostId: meeting.hostId, livekitRoomName: meeting.livekitRoomName })
+      .select({
+        hostId: meeting.hostId,
+        livekitRoomName: meeting.livekitRoomName,
+      })
       .from(meetingSession)
       .innerJoin(meeting, eq(meetingSession.meetingId, meeting.id))
       .where(eq(meetingSession.id, sessionId));
@@ -66,7 +76,8 @@ export async function POST(
     // Call LiveKit server API if configured
     const apiKey = process.env.LIVEKIT_API_KEY;
     const apiSecret = process.env.LIVEKIT_API_SECRET;
-    const wsUrl = process.env.NEXT_PUBLIC_LIVEKIT_URL;
+    const wsUrl =
+      process.env.NEXT_PUBLIC_LIVEKIT_URL || process.env.LIVEKIT_URL;
 
     if (apiKey && apiSecret && wsUrl) {
       const roomClient = new RoomServiceClient(
@@ -79,7 +90,8 @@ export async function POST(
         targetParticipant.livekitIdentity,
         undefined,
         {
-          canPublish: trackType === "audio" ? !mute : targetParticipant.canPublishAudio,
+          canPublish:
+            trackType === "audio" ? !mute : targetParticipant.canPublishAudio,
         },
       );
     }

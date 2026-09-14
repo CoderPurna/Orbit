@@ -1,230 +1,248 @@
 "use client";
 
-import { useState, useRef, useEffect, Suspense } from "react";
+import { Suspense, useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { authClient } from "@/lib/auth-client";
+import { MailCheck, ShieldCheck } from "lucide-react";
+import { authClient, useSession } from "@/lib/auth-client";
+import { OrbitLogo } from "@/components/orbit-logo";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Spinner } from "@/components/ui/spinner";
+import {
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSeparator,
+  InputOTPSlot,
+} from "@/components/ui/input-otp";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { notify } from "@/lib/toast";
+import { safeNext } from "@/lib/safe-redirect";
 
 function VerifyEmailForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const initialEmail = searchParams.get("email") || "";
+  const { data: session, isPending } = useSession();
+  const next = safeNext(searchParams.get("next"));
 
-  const [email, setEmail] = useState(initialEmail);
-  const [otp, setOtp] = useState(["", "", "", "", "", ""]);
+  const [emailInput, setEmail] = useState(searchParams.get("email") || "");
+  const [otp, setOtp] = useState("");
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
+  const [cooldown, setCooldown] = useState(0);
   const [errorMessage, setErrorMessage] = useState("");
-  const [successMessage, setSuccessMessage] = useState("");
-  const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+
+  // Fall back to the signed-in user's email without syncing state in an effect.
+  const email = emailInput || session?.user?.email || "";
 
   useEffect(() => {
-    if (initialEmail) {
-      setEmail(initialEmail);
-    }
-  }, [initialEmail]);
+    if (cooldown <= 0) return;
+    const t = setTimeout(() => setCooldown((c) => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [cooldown]);
 
-  const handleChange = (index: number, value: string) => {
-    if (!/^\d*$/.test(value)) return;
+  const alreadyVerified = Boolean(session?.user?.emailVerified);
 
-    const newOtp = [...otp];
-    // Handle paste of 6 digits
-    if (value.length > 1) {
-      const digits = value.slice(0, 6).split("");
-      for (let i = 0; i < 6; i++) {
-        newOtp[i] = digits[i] || "";
-      }
-      setOtp(newOtp);
-      const nextFocusIndex = Math.min(digits.length, 5);
-      inputRefs.current[nextFocusIndex]?.focus();
-      return;
-    }
-
-    newOtp[index] = value;
-    setOtp(newOtp);
-
-    // Auto-focus next input
-    if (value && index < 5) {
-      inputRefs.current[index + 1]?.focus();
-    }
-  };
-
-  const handleKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Backspace" && !otp[index] && index > 0) {
-      inputRefs.current[index - 1]?.focus();
-    }
-  };
-
-  const handleVerify = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const code = otp.join("");
+  const handleVerify = async (e?: React.FormEvent) => {
+    e?.preventDefault();
     if (!email) {
-      setErrorMessage("Please enter your email address.");
+      setErrorMessage("Enter the email address you signed up with.");
       return;
     }
-    if (code.length < 6) {
-      setErrorMessage("Please enter the full 6-digit code.");
+    if (otp.length < 6) {
+      setErrorMessage("Enter the full 6-digit code.");
       return;
     }
 
     setLoading(true);
     setErrorMessage("");
-    setSuccessMessage("");
+    const res = await authClient.emailOtp.verifyEmail({ email, otp });
+    setLoading(false);
 
-    try {
-      const res = await authClient.emailOtp.verifyEmail({
-        email,
-        otp: code,
-      });
-
-      if (res.error) {
-        setErrorMessage(res.error.message || "Invalid verification code.");
-      } else {
-        setSuccessMessage("Email verified successfully! Redirecting...");
-        setTimeout(() => {
-          router.push("/");
-        }, 1500);
-      }
-    } catch (err: any) {
-      setErrorMessage(err.message || "An error occurred during verification.");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleResendOtp = async () => {
-    if (!email) {
-      setErrorMessage("Please enter your email address to resend code.");
+    if (res.error) {
+      setErrorMessage(
+        res.error.message || "That code didn't work. Check it and try again.",
+      );
+      setOtp("");
       return;
     }
-
-    setResending(true);
-    setErrorMessage("");
-    setSuccessMessage("");
-
-    try {
-      const res = await authClient.emailOtp.sendVerificationOtp({
-        email,
-        type: "email-verification",
-      });
-
-      if (res.error) {
-        setErrorMessage(res.error.message || "Failed to resend code.");
-      } else {
-        setSuccessMessage("A new 6-digit code has been sent to your email.");
-      }
-    } catch (err: any) {
-      setErrorMessage(err.message || "Failed to resend code.");
-    } finally {
-      setResending(false);
-    }
+    notify.success("Email verified", "You can now create meetings.");
+    router.push(next);
+    router.refresh();
   };
 
-  return (
-    <div className="w-full max-w-md space-y-6 rounded-2xl border border-border bg-card p-8 shadow-xl">
-      <div className="text-center space-y-2">
-        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
-          <svg
-            className="h-6 w-6"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-            />
-          </svg>
+  const handleResend = async () => {
+    if (!email) {
+      setErrorMessage("Enter your email address to resend the code.");
+      return;
+    }
+    setResending(true);
+    setErrorMessage("");
+    const res = await authClient.emailOtp.sendVerificationOtp({
+      email,
+      type: "email-verification",
+    });
+    setResending(false);
+    if (res.error) {
+      setErrorMessage(res.error.message || "Could not resend the code.");
+      return;
+    }
+    setCooldown(45);
+    notify.info("Code sent", `A new 6-digit code is on its way to ${email}.`);
+  };
+
+  if (isPending) {
+    return (
+      <div className="flex h-40 items-center justify-center">
+        <Spinner />
+      </div>
+    );
+  }
+
+  if (alreadyVerified) {
+    return (
+      <div className="space-y-4 text-center">
+        <div className="bg-primary/10 text-primary mx-auto flex size-12 items-center justify-center rounded-full">
+          <ShieldCheck size={22} />
         </div>
-        <h1 className="text-2xl font-bold tracking-tight text-foreground">
-          Verify your email
+        <div>
+          <h1 className="font-display text-2xl tracking-tight">
+            You&apos;re verified
+          </h1>
+          <p className="text-muted-foreground mt-1 text-sm">
+            {session?.user?.email} is confirmed. Nothing else to do here.
+          </p>
+        </div>
+        <Button className="rounded-xl" onClick={() => router.push(next)}>
+          Continue
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <form onSubmit={handleVerify} className="space-y-6" noValidate>
+      <div className="space-y-2">
+        <div className="bg-primary/10 text-primary flex size-11 items-center justify-center rounded-xl">
+          <MailCheck size={20} />
+        </div>
+        <h1 className="font-display text-3xl tracking-[-0.03em]">
+          Check your inbox
         </h1>
-        <p className="text-sm text-muted-foreground">
-          Enter the 6-digit code sent to your email address.
+        <p className="text-muted-foreground text-sm">
+          We sent a 6-digit code{email ? ` to ${email}` : ""}. Verifying unlocks
+          meeting creation — you can still join meetings without it.
         </p>
       </div>
 
       {errorMessage && (
-        <div className="rounded-lg bg-destructive/10 border border-destructive/20 p-3 text-sm text-destructive text-center">
-          {errorMessage}
-        </div>
+        <Alert variant="destructive">
+          <AlertTitle>Verification failed</AlertTitle>
+          <AlertDescription>{errorMessage}</AlertDescription>
+        </Alert>
       )}
 
-      {successMessage && (
-        <div className="rounded-lg bg-primary/10 border border-primary/20 p-3 text-sm text-primary text-center font-medium">
-          {successMessage}
-        </div>
-      )}
-
-      <form onSubmit={handleVerify} className="space-y-6">
-        <div className="space-y-2">
-          <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-            Email Address
-          </label>
-          <input
+      {!searchParams.get("email") && (
+        <div className="space-y-1.5">
+          <Label
+            htmlFor="verify-email"
+            className="text-muted-foreground text-xs"
+          >
+            Email address
+          </Label>
+          <Input
+            id="verify-email"
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="you@example.com"
-            required
-            className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+            className="bg-card h-10 rounded-xl"
           />
         </div>
+      )}
 
-        <div className="space-y-2">
-          <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider block text-center">
-            Verification Code
-          </label>
-          <div className="flex justify-center gap-2">
-            {otp.map((digit, index) => (
-              <input
-                key={index}
-                ref={(el) => {
-                  inputRefs.current[index] = el;
-                }}
-                type="text"
-                inputMode="numeric"
-                maxLength={6}
-                value={digit}
-                onChange={(e) => handleChange(index, e.target.value)}
-                onKeyDown={(e) => handleKeyDown(index, e)}
-                className="h-12 w-11 rounded-lg border border-input bg-background text-center text-xl font-bold font-mono text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary"
-              />
-            ))}
-          </div>
-        </div>
-
-        <button
-          type="submit"
-          disabled={loading || otp.join("").length < 6}
-          className="w-full rounded-xl bg-primary py-3 font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
+      <div className="space-y-2">
+        <Label className="text-muted-foreground text-xs">
+          Verification code
+        </Label>
+        <InputOTP
+          maxLength={6}
+          value={otp}
+          onChange={(value) => {
+            setOtp(value);
+            setErrorMessage("");
+          }}
+          onComplete={() => void handleVerify()}
+          autoFocus
+          containerClassName="justify-start"
         >
-          {loading ? "Verifying..." : "Verify Code"}
-        </button>
-      </form>
-
-      <div className="text-center text-sm text-muted-foreground">
-        Didn't receive the code?{" "}
-        <button
-          type="button"
-          onClick={handleResendOtp}
-          disabled={resending || !email}
-          className="font-medium text-primary hover:underline disabled:opacity-50"
-        >
-          {resending ? "Sending..." : "Resend Code"}
-        </button>
+          <InputOTPGroup>
+            <InputOTPSlot index={0} className="size-11 font-mono text-lg" />
+            <InputOTPSlot index={1} className="size-11 font-mono text-lg" />
+            <InputOTPSlot index={2} className="size-11 font-mono text-lg" />
+          </InputOTPGroup>
+          <InputOTPSeparator />
+          <InputOTPGroup>
+            <InputOTPSlot index={3} className="size-11 font-mono text-lg" />
+            <InputOTPSlot index={4} className="size-11 font-mono text-lg" />
+            <InputOTPSlot index={5} className="size-11 font-mono text-lg" />
+          </InputOTPGroup>
+        </InputOTP>
       </div>
-    </div>
+
+      <div className="flex flex-col gap-3">
+        <Button
+          type="submit"
+          disabled={loading || otp.length < 6}
+          className="h-10 rounded-xl"
+        >
+          {loading ? <Spinner /> : null}
+          {loading ? "Verifying..." : "Verify email"}
+        </Button>
+        <div className="text-muted-foreground flex items-center justify-between text-xs">
+          <button
+            type="button"
+            onClick={handleResend}
+            disabled={resending || cooldown > 0 || !email}
+            className="text-primary font-medium hover:underline disabled:no-underline disabled:opacity-50"
+          >
+            {resending
+              ? "Sending..."
+              : cooldown > 0
+                ? `Resend in ${cooldown}s`
+                : "Resend code"}
+          </button>
+          <Link href={next} className="hover:text-foreground">
+            Skip for now
+          </Link>
+        </div>
+      </div>
+    </form>
   );
 }
 
 export default function VerifyEmailPage() {
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-background">
-      <Suspense fallback={<div className="text-muted-foreground">Loading...</div>}>
-        <VerifyEmailForm />
-      </Suspense>
-    </div>
+    <main className="bg-background min-h-screen">
+      <div className="mx-auto flex min-h-screen w-full max-w-md flex-col justify-between px-6 py-8 sm:px-8">
+        <OrbitLogo size={26} />
+        <div className="py-10">
+          <Suspense
+            fallback={
+              <div className="flex h-40 items-center justify-center">
+                <Spinner />
+              </div>
+            }
+          >
+            <VerifyEmailForm />
+          </Suspense>
+        </div>
+        <p className="text-muted-foreground/70 text-[11px]">
+          Codes expire after a few minutes. Didn&apos;t sign up? You can safely
+          ignore the email.
+        </p>
+      </div>
+    </main>
   );
 }

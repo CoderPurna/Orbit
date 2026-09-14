@@ -1,31 +1,29 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import Link from "next/link";
-import {
-  ArrowRight,
-  KeyRound,
-  Eye,
-  EyeOff,
-  Lock,
-  Mail,
-  User,
-} from "lucide-react";
+import { Eye, EyeOff, Lock, Mail, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Spinner } from "@/components/ui/spinner";
 import { AuthSocialButtons } from "@/components/auth-social-buttons";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { signUp } from "@/lib/auth-client";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { signUpSchema, type SignUpValues } from "@/lib/validations/auth";
+import { notify } from "@/lib/toast";
+import { safeNext } from "@/lib/safe-redirect";
 
-export default function SignUpPage() {
+function SignUpForm() {
   const router = useRouter();
-  const { isLoading, setIsLoading } = useAuthStore();
+  const searchParams = useSearchParams();
+  const next = safeNext(searchParams.get("next"));
+  const isJoinFlow = next.startsWith("/m/");
 
+  const { isLoading, setIsLoading } = useAuthStore();
   const [showPassword, setShowPassword] = useState(false);
 
   const {
@@ -34,123 +32,205 @@ export default function SignUpPage() {
     formState: { errors },
   } = useForm<SignUpValues>({
     resolver: zodResolver(signUpSchema),
-    defaultValues: {
-      name: "",
-      email: "",
-      password: "",
-    },
+    defaultValues: { name: "", email: "", password: "" },
   });
 
   const onSubmit = async (values: SignUpValues) => {
     setIsLoading(true);
-    const { data, error } = await signUp.email({
+    const { error } = await signUp.email({
       email: values.email,
       password: values.password,
-      name: values.name
+      name: values.name,
     });
     setIsLoading(false);
 
     if (error) {
-      alert(error.message || "Something went wrong.");
-    } else {
-      router.push("/dashboard");
+      notify.error("Could not create your account", error);
+      return;
     }
+
+    // PRD F2: a sign-up from a join link goes straight into the room. Email
+    // verification happens asynchronously — it only gates *creating* meetings.
+    if (isJoinFlow) {
+      notify.success(
+        "Welcome to Orbit",
+        "We emailed you a verification code for later.",
+      );
+      router.push(next);
+    } else {
+      router.push(
+        `/verify-email?email=${encodeURIComponent(values.email)}&next=${encodeURIComponent(next)}`,
+      );
+    }
+    router.refresh();
   };
+
+  const signInHref =
+    next !== "/dashboard"
+      ? `/signin?next=${encodeURIComponent(next)}`
+      : "/signin";
+
   return (
     <>
       <div className="mb-6">
-        <h1 className="text-3xl sm:text-4xl font-display font-normal tracking-[-0.03em] text-foreground mb-2">
-          Create your workspace
+        <h1 className="font-display text-foreground mb-2 text-3xl font-normal tracking-[-0.03em] sm:text-4xl">
+          {isJoinFlow ? "Create an account to join" : "Create your workspace"}
         </h1>
-        <p className="text-sm text-muted-foreground">
-          Spin up crystal-clear encrypted meetings in under 30 seconds.
+        <p className="text-muted-foreground text-sm">
+          {isJoinFlow
+            ? "Takes a few seconds. You'll land in the meeting right after."
+            : "Spin up crystal-clear encrypted meetings in under 30 seconds."}
         </p>
       </div>
 
-      {/* Social OAuth Buttons */}
-      <AuthSocialButtons />
+      <AuthSocialButtons callbackURL={next} />
 
-      {/* Divider */}
       <div className="relative my-6 text-center text-xs">
         <div className="absolute inset-0 flex items-center">
-          <span className="w-full border-t border-border" />
+          <span className="border-border w-full border-t" />
         </div>
-        <span className="relative bg-background px-3 text-muted-foreground uppercase text-[10px] tracking-widest font-mono">
+        <span className="bg-background text-muted-foreground relative px-3 font-mono text-[10px] tracking-widest uppercase">
           or email
         </span>
       </div>
 
-      {/* Password credentials form */}
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-3.5">
+      <form
+        onSubmit={handleSubmit(onSubmit)}
+        className="space-y-3.5"
+        noValidate
+      >
         <div className="space-y-1">
-          <Label className="text-xs font-medium text-muted-foreground">Full name</Label>
+          <Label
+            htmlFor="signup-name"
+            className="text-muted-foreground text-xs font-medium"
+          >
+            Full name
+          </Label>
           <div className="relative">
-            <User size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <User
+              size={15}
+              className="text-muted-foreground absolute top-1/2 left-3 -translate-y-1/2"
+            />
             <Input
+              id="signup-name"
               type="text"
+              autoComplete="name"
               placeholder="Sarah Chen"
+              aria-invalid={Boolean(errors.name)}
               {...register("name")}
-              className={`w-full h-10 pl-9 pr-3 rounded-xl bg-card text-sm text-foreground focus-visible:ring-2 focus-visible:ring-[#3FB27A] transition-all placeholder:text-muted-foreground/60 ${errors.name ? "border-destructive focus-visible:ring-destructive" : ""}`}
+              className="bg-card placeholder:text-muted-foreground/60 h-10 w-full rounded-xl pr-3 pl-9 text-sm"
             />
           </div>
-          {errors.name && <p className="text-[10px] text-destructive px-1">{errors.name.message}</p>}
+          {errors.name && (
+            <p role="alert" className="text-destructive px-1 text-[11px]">
+              {errors.name.message}
+            </p>
+          )}
         </div>
 
         <div className="space-y-1">
-          <Label className="text-xs font-medium text-muted-foreground">Work email</Label>
+          <Label
+            htmlFor="signup-email"
+            className="text-muted-foreground text-xs font-medium"
+          >
+            Work email
+          </Label>
           <div className="relative">
-            <Mail size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <Mail
+              size={15}
+              className="text-muted-foreground absolute top-1/2 left-3 -translate-y-1/2"
+            />
             <Input
+              id="signup-email"
               type="email"
+              autoComplete="email"
               placeholder="sarah@acme.com"
+              aria-invalid={Boolean(errors.email)}
               {...register("email")}
-              className={`w-full h-10 pl-9 pr-3 rounded-xl bg-card text-sm text-foreground focus-visible:ring-2 focus-visible:ring-[#3FB27A] transition-all placeholder:text-muted-foreground/60 ${errors.email ? "border-destructive focus-visible:ring-destructive" : ""}`}
+              className="bg-card placeholder:text-muted-foreground/60 h-10 w-full rounded-xl pr-3 pl-9 text-sm"
             />
           </div>
-          {errors.email && <p className="text-[10px] text-destructive px-1">{errors.email.message}</p>}
+          {errors.email && (
+            <p role="alert" className="text-destructive px-1 text-[11px]">
+              {errors.email.message}
+            </p>
+          )}
         </div>
 
         <div className="space-y-1">
-          <div className="flex justify-between items-center">
-            <Label className="text-xs font-medium text-muted-foreground">Password</Label>
-          </div>
+          <Label
+            htmlFor="signup-password"
+            className="text-muted-foreground text-xs font-medium"
+          >
+            Password
+          </Label>
           <div className="relative">
-            <Lock size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <Lock
+              size={15}
+              className="text-muted-foreground absolute top-1/2 left-3 -translate-y-1/2"
+            />
             <Input
+              id="signup-password"
               type={showPassword ? "text" : "password"}
-              placeholder="••••••••••••"
+              autoComplete="new-password"
+              placeholder="At least 8 characters"
+              aria-invalid={Boolean(errors.password)}
               {...register("password")}
-              className={`w-full h-10 pl-9 pr-10 rounded-xl bg-card text-sm text-foreground focus-visible:ring-2 focus-visible:ring-[#3FB27A] transition-all placeholder:text-muted-foreground/60 ${errors.password ? "border-destructive focus-visible:ring-destructive" : ""}`}
+              className="bg-card placeholder:text-muted-foreground/60 h-10 w-full rounded-xl pr-10 pl-9 text-sm"
             />
             <button
               type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              onClick={() => setShowPassword((v) => !v)}
+              aria-label={showPassword ? "Hide password" : "Show password"}
+              className="text-muted-foreground hover:text-foreground absolute top-1/2 right-3 -translate-y-1/2"
             >
               {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
             </button>
           </div>
-          {errors.password && <p className="text-[10px] text-destructive px-1">{errors.password.message}</p>}
+          {errors.password && (
+            <p role="alert" className="text-destructive px-1 text-[11px]">
+              {errors.password.message}
+            </p>
+          )}
         </div>
 
         <Button
           type="submit"
           disabled={isLoading}
-          className="w-full h-10 mt-1 rounded-xl bg-[#3FB27A] hover:bg-[#349866] text-white font-medium text-xs tracking-wide shadow-lg shadow-[#3FB27A]/20 transition-transform active:scale-[0.99] disabled:opacity-70 disabled:pointer-events-none"
+          className="shadow-primary/20 mt-1 h-10 w-full rounded-xl text-xs tracking-wide shadow-lg"
         >
-          {isLoading ? "Creating account..." : "Create team account"}
+          {isLoading ? <Spinner /> : null}
+          {isLoading
+            ? "Creating account..."
+            : isJoinFlow
+              ? "Create account and join"
+              : "Create account"}
         </Button>
       </form>
 
-      <div className="mt-6 text-center text-xs text-muted-foreground">
+      <div className="text-muted-foreground mt-6 text-center text-xs">
         Already registered?{" "}
         <Link
-          href="/signin"
-          className="text-[#3FB27A] font-semibold hover:underline"
+          href={signInHref}
+          className="text-primary font-semibold hover:underline"
         >
           Sign in here
         </Link>
       </div>
     </>
+  );
+}
+
+export default function SignUpPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="text-muted-foreground flex h-40 items-center justify-center">
+          <Spinner />
+        </div>
+      }
+    >
+      <SignUpForm />
+    </Suspense>
   );
 }

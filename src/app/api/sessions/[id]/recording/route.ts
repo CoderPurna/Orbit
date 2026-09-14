@@ -40,7 +40,10 @@ export async function POST(
       return apiError("not_found", "Session not found", 404);
     }
 
-    const actorParticipant = await findParticipant(sessionId, sessionAuth.user.id);
+    const actorParticipant = await findParticipant(
+      sessionId,
+      sessionAuth.user.id,
+    );
     const isHost = sess.hostId === sessionAuth.user.id;
     const isCoHost = actorParticipant?.role === "co_host";
     if (!isHost && !isCoHost) {
@@ -84,14 +87,19 @@ export async function POST(
 
       const apiKey = process.env.LIVEKIT_API_KEY;
       const apiSecret = process.env.LIVEKIT_API_SECRET;
-      const wsUrl = process.env.NEXT_PUBLIC_LIVEKIT_URL;
+      const wsUrl =
+        process.env.NEXT_PUBLIC_LIVEKIT_URL || process.env.LIVEKIT_URL;
       const r2Endpoint = process.env.R2_ENDPOINT;
       const r2AccessKey = process.env.R2_ACCESS_KEY_ID;
       const r2Secret = process.env.R2_SECRET_ACCESS_KEY;
 
       // Fail loudly: a recording row with nowhere to record is a lie.
       if (!apiKey || !apiSecret || !wsUrl) {
-        return apiError("media_not_configured", "LiveKit is not configured", 503);
+        return apiError(
+          "media_not_configured",
+          "LiveKit is not configured",
+          503,
+        );
       }
       if (!r2Endpoint || !r2AccessKey || !r2Secret) {
         return apiError(
@@ -170,14 +178,17 @@ export async function POST(
 
     const apiKey = process.env.LIVEKIT_API_KEY;
     const apiSecret = process.env.LIVEKIT_API_SECRET;
-    const wsUrl = process.env.NEXT_PUBLIC_LIVEKIT_URL;
+    const wsUrl =
+      process.env.NEXT_PUBLIC_LIVEKIT_URL || process.env.LIVEKIT_URL;
     if (apiKey && apiSecret && wsUrl && activeRec.livekitEgressId) {
       const egressClient = new EgressClient(
         wsUrl.replace(/^ws/, "http"),
         apiKey,
         apiSecret,
       );
-      await egressClient.stopEgress(activeRec.livekitEgressId).catch(() => null);
+      await egressClient
+        .stopEgress(activeRec.livekitEgressId)
+        .catch(() => null);
     }
 
     // The egress_ended webhook owns the completed/failed transition; this
