@@ -1,41 +1,43 @@
 "use client";
 
+import * as React from "react";
+import { Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
-import { useEffect, useState } from "react";
-import { Sun, Moon} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 
-export function ThemeToggle() {
-  const { theme, setTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
+interface ThemeToggleProps {
+  className?: string;
+  variant?: "default" | "destructive" | "outline" | "secondary" | "ghost" | "link";
+  iconSize?: number;
+}
 
-  useEffect(() => {
+export function ThemeToggle({
+  className,
+  variant = "ghost",
+  iconSize = 15,
+}: ThemeToggleProps) {
+  const { setTheme, resolvedTheme } = useTheme();
+  const [mounted, setMounted] = React.useState(false);
+
+  React.useEffect(() => {
     setMounted(true);
   }, []);
 
   if (!mounted) {
-    return (
-      <div className="h-9 w-9 rounded-full border border-border bg-secondary/50" />
-    );
+    return <Skeleton className={cn("h-9 w-9 rounded-full", className)} />;
   }
 
-  const toggleTheme = () => {
-    if (theme === "dark") {
-      setTheme("light");
-    } else {
-      setTheme("dark");
-    }
-  };
-
   return (
-    <button
-      type="button"
-      onClick={toggleTheme}
-      title={`Current theme: ${theme}. Click to switch.`}
-      className="relative inline-flex h-9 w-9 items-center justify-center rounded-full border border-border bg-secondary/60 text-foreground transition-all duration-150 ease-out hover:bg-secondary hover:border-primary/40 active:scale-95 focus:outline-none focus:ring-2 focus:ring-ring"
+    <Button
+      variant={variant}
+      size="icon"
+      onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
+      className={cn("h-9 w-9 rounded-full text-muted-foreground hover:text-foreground transition-colors", className)}
+      aria-label="Toggle theme"
     >
-      {theme === "dark" && <Moon className="h-4 w-4 text-primary transition-all" />}
-      {theme === "light" && <Sun className="h-4 w-4 text-amber-500 transition-all" />}
-      <span className="sr-only">Toggle theme</span>
-    </button>
+      {resolvedTheme === "dark" ? <Sun size={iconSize} /> : <Moon size={iconSize} />}
+    </Button>
   );
 }

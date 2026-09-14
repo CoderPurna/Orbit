@@ -2,9 +2,8 @@
 
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Phone, Moon, Sun, Menu, X, LogOut, LayoutDashboard, User } from "lucide-react";
-import { useTheme } from "next-themes";
-import { useEffect, useState } from "react";
+import { Phone, Menu, X, LogOut, LayoutDashboard, User } from "lucide-react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession, signOut } from "@/lib/auth-client";
 import {
@@ -18,6 +17,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 
 import { OrbitLogo } from "@/components/orbit-logo";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export function LandingNavbar({
   onSignIn,
@@ -26,16 +26,10 @@ export function LandingNavbar({
   onSignIn?: () => void;
   onSignUp?: () => void;
 }) {
-  const { theme, setTheme, resolvedTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
   const { data: session, isPending } = useSession();
   const router = useRouter();
-  
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   const handleSignOut = async () => {
     await signOut();
@@ -64,19 +58,7 @@ export function LandingNavbar({
 
         <div className="flex items-center gap-1 sm:gap-2">
           <div className="hidden md:block">
-            {mounted ? (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
-                className="h-9 w-9 rounded-full text-muted-foreground hover:text-foreground transition-colors"
-                aria-label="Toggle theme"
-              >
-                {resolvedTheme === "dark" ? <Sun size={15} /> : <Moon size={15} />}
-              </Button>
-            ) : (
-              <Skeleton className="h-9 w-9 rounded-full" />
-            )}
+            <ThemeToggle />
           </div>
           
           {isPending ? (
@@ -158,19 +140,7 @@ export function LandingNavbar({
           
           <div className="flex items-center justify-between">
              <span className="text-sm font-medium text-muted-foreground">Theme</span>
-             {mounted ? (
-              <Button
-                variant="secondary"
-                size="icon"
-                onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
-                className="h-10 w-10 rounded-full transition-colors"
-                aria-label="Toggle theme"
-              >
-                {resolvedTheme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
-              </Button>
-            ) : (
-              <Skeleton className="h-10 w-10 rounded-full" />
-            )}
+             <ThemeToggle variant="secondary" className="h-10 w-10" iconSize={18} />
           </div>
           
           {isPending ? (
