@@ -51,9 +51,9 @@ export default function DashboardHomePage() {
   const user = useShellUser();
   const { data: meetings, isPending, isError } = useMeetings({ limit: 50 });
   const [scheduleOpen, setScheduleOpen] = React.useState(false);
-  // Captured once per mount so render stays pure (React compiler rules).
   const [today] = React.useState(() => new Date());
   const now = today.getTime();
+
   const live = (meetings ?? []).filter((m) => m.status === "live");
   const upcoming = (meetings ?? [])
     .filter(
@@ -69,6 +69,7 @@ export default function DashboardHomePage() {
         new Date(b.scheduledStartAt ?? b.createdAt).getTime(),
     )
     .slice(0, 5);
+
   const recent = (meetings ?? [])
     .filter((m) => m.status === "ended")
     .slice(0, 5);
@@ -85,59 +86,69 @@ export default function DashboardHomePage() {
         description="Start a call in one click, schedule one for later, or join with a code."
       />
 
+      {/* Action Cards Section */}
       <div className="grid gap-4 md:grid-cols-3">
-        <Card className="ring-primary/30 relative overflow-hidden md:col-span-1">
+        {/* Instant Meeting (Hero Card) */}
+        <Card className="group relative flex flex-col justify-between overflow-hidden border-primary/20 bg-gradient-to-b from-primary/[0.04] to-transparent shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md">
           <div
             aria-hidden="true"
-            className="bg-primary/10 pointer-events-none absolute -top-10 -right-10 size-40 rounded-full blur-2xl"
+            className="pointer-events-none absolute -right-8 -top-8 size-36 rounded-full bg-primary/10 blur-2xl transition-transform duration-300 group-hover:scale-125"
           />
-          <CardHeader>
-            <div className="bg-primary text-primary-foreground mb-1 flex size-9 items-center justify-center rounded-lg">
-              <Zap className="size-4" />
+          <CardHeader className="relative pb-4">
+            <div className="mb-3 flex size-10 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm shadow-primary/25">
+              <Zap className="size-5" />
             </div>
-            <CardTitle>Instant meeting</CardTitle>
-            <CardDescription>
-              A room with your name on it, ready in a second.
+            <CardTitle className="text-lg font-semibold tracking-tight">
+              Instant meeting
+            </CardTitle>
+            <CardDescription className="text-sm leading-relaxed">
+              Start a call immediately in your personal room and invite guests.
             </CardDescription>
           </CardHeader>
-          <CardContent className="mt-auto">
-            <QuickStartButton className="w-full" />
+          <CardContent className="relative pt-0">
+            <QuickStartButton className="w-full font-medium shadow-sm transition-shadow hover:shadow" />
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <div className="bg-muted text-foreground mb-1 flex size-9 items-center justify-center rounded-lg">
-              <CalendarPlus className="size-4" />
+        {/* Schedule */}
+        <Card className="group flex flex-col justify-between border-border/70 bg-card/60 shadow-sm backdrop-blur-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-border hover:shadow-md">
+          <CardHeader className="pb-4">
+            <div className="mb-3 flex size-10 items-center justify-center rounded-xl border border-border/60 bg-muted/60 text-foreground transition-colors group-hover:bg-muted">
+              <CalendarPlus className="size-5 text-muted-foreground transition-colors group-hover:text-foreground" />
             </div>
-            <CardTitle>Schedule</CardTitle>
-            <CardDescription>
-              Pick a time, send invites, get a calendar file.
+            <CardTitle className="text-lg font-semibold tracking-tight">
+              Schedule
+            </CardTitle>
+            <CardDescription className="text-sm leading-relaxed">
+              Set a date, generate a link, and send calendar invites in advance.
             </CardDescription>
           </CardHeader>
-          <CardContent className="mt-auto">
+          <CardContent className="pt-0">
             <Button
               variant="outline"
-              className="w-full"
+              className="w-full font-medium transition-colors hover:bg-accent"
               onClick={() => setScheduleOpen(true)}
             >
-              <CalendarPlus />
+              <CalendarPlus className="mr-2 size-4" />
               Schedule a meeting
             </Button>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <div className="bg-muted text-foreground mb-1 flex size-9 items-center justify-center rounded-lg">
-              <Hash className="size-4" />
+        {/* Join by Code */}
+        <Card className="group flex flex-col justify-between border-border/70 bg-card/60 shadow-sm backdrop-blur-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-border hover:shadow-md">
+          <CardHeader className="pb-4">
+            <div className="mb-3 flex size-10 items-center justify-center rounded-xl border border-border/60 bg-muted/60 text-foreground transition-colors group-hover:bg-muted">
+              <Hash className="size-5 text-muted-foreground transition-colors group-hover:text-foreground" />
             </div>
-            <CardTitle>Join</CardTitle>
-            <CardDescription>
+            <CardTitle className="text-lg font-semibold tracking-tight">
+              Join
+            </CardTitle>
+            <CardDescription className="text-sm leading-relaxed">
               Paste a link or type a code like orb-xxxx-xxxx.
             </CardDescription>
           </CardHeader>
-          <CardContent className="mt-auto">
+          <CardContent className="pt-0">
             <JoinByCode />
           </CardContent>
         </Card>

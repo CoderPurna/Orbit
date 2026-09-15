@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { PageHeader } from "@/components/app-shell/page-header";
+import { Settings as SettingsIcon } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ProfileSection } from "@/components/settings/profile-section";
@@ -47,61 +47,76 @@ function Settings() {
   };
 
   return (
-    <>
-      <PageHeader
-        title="Settings"
-        description="Your account, security, notifications and data."
-      />
+    <div className="w-full max-w-7xl mx-auto px-6 md:px-12 pb-24">
+      {/* Cinematic Header */}
+      <section className="mb-12 border-b border-border/20 pt-16 pb-12">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-8">
+          <div className="space-y-4 max-w-3xl">
+            <h1 className="text-[clamp(2.5rem,4vw,3.5rem)] leading-[1.05] font-black tracking-tight" style={{ fontFamily: "var(--font-geist-sans), sans-serif" }}>
+              Settings
+            </h1>
+            
+            <p className="text-xl text-muted-foreground font-light tracking-wide">
+              Manage your account, security, notifications and data.
+            </p>
+          </div>
+          <div className="hidden md:block opacity-10">
+            <SettingsIcon className="size-32 text-foreground" />
+          </div>
+        </div>
+      </section>
 
       <Tabs
         value={tab}
         onValueChange={setTab}
         orientation="horizontal"
-        className="gap-6"
+        className="flex flex-col gap-8"
       >
         <TabsList
           variant="line"
-          className="w-full justify-start overflow-x-auto border-b"
+          className="w-full justify-start overflow-x-auto border-b border-border/20 gap-6"
         >
-          <TabsTrigger value="profile" className="px-3">
+          <TabsTrigger value="profile" className="pb-4 text-base tracking-wide uppercase font-semibold">
             Profile
           </TabsTrigger>
-          <TabsTrigger value="security" className="px-3">
+          <TabsTrigger value="security" className="pb-4 text-base tracking-wide uppercase font-semibold">
             Security
           </TabsTrigger>
-          <TabsTrigger value="notifications" className="px-3">
+          <TabsTrigger value="notifications" className="pb-4 text-base tracking-wide uppercase font-semibold">
             Notifications
           </TabsTrigger>
-          <TabsTrigger value="usage" className="px-3">
+          <TabsTrigger value="usage" className="pb-4 text-base tracking-wide uppercase font-semibold">
             Usage
           </TabsTrigger>
-          <TabsTrigger value="activity" className="px-3">
+          <TabsTrigger value="activity" className="pb-4 text-base tracking-wide uppercase font-semibold">
             Activity
           </TabsTrigger>
-          <TabsTrigger value="data" className="px-3">
+          <TabsTrigger value="data" className="pb-4 text-base tracking-wide uppercase font-semibold">
             Data &amp; privacy
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="profile">
-          <ProfileSection />
-        </TabsContent>
-        <TabsContent value="security">
-          <SecuritySection />
-        </TabsContent>
-        <TabsContent value="notifications">
-          <NotificationsSection />
-        </TabsContent>
-        <TabsContent value="usage">
-          <UsageSection />
-        </TabsContent>
-        <TabsContent value="activity">
-          <ActivitySection />
-        </TabsContent>
-        <TabsContent value="data">
-          <DataSection />
-        </TabsContent>
+        <div className="mt-8 max-w-4xl">
+          <TabsContent value="profile" className="m-0 focus-visible:outline-none">
+            <ProfileSection />
+          </TabsContent>
+          <TabsContent value="security" className="m-0 focus-visible:outline-none">
+            <SecuritySection />
+          </TabsContent>
+          <TabsContent value="notifications" className="m-0 focus-visible:outline-none">
+            <NotificationsSection />
+          </TabsContent>
+          <TabsContent value="usage" className="m-0 focus-visible:outline-none">
+            <UsageSection />
+          </TabsContent>
+          <TabsContent value="activity" className="m-0 focus-visible:outline-none">
+            <ActivitySection />
+          </TabsContent>
+          <TabsContent value="data" className="m-0 focus-visible:outline-none">
+            <DataSection />
+          </TabsContent>
+        </div>
       </Tabs>
-    </>
+    </div>
   );
 }
